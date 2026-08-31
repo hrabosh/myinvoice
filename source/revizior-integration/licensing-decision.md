@@ -1,6 +1,6 @@
 # R0 — licenční a provenance rozhodnutí
 
-> Auditováno: 2026-08-31  
+> Auditováno: 2026-08-31
 > Rozsah: managed fork `hrabosh/fakturace.revizior.cz` před vznikem runtime integrace
 
 ## Rozhodnutí

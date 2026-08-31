@@ -1,6 +1,6 @@
 # R0 baseline
 
-> Stav baseline: provider i cross-repo hash gate zelené  
+> Stav baseline: provider i cross-repo hash gate zelené
 > Datum: 2026-08-31
 
 ## Identita zdrojů

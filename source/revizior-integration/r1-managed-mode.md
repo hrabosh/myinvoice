@@ -1,6 +1,6 @@
 # R1 managed mode — implementovaný základ
 
-> Stav: první aditivní slice hotový; permission/provisioning část R1 zůstává otevřená  
+> Stav: první aditivní slice hotový; permission/provisioning část R1 zůstává otevřená
 > Datum: 2026-08-31
 
 ## Hotovo
