@@ -22,6 +22,14 @@
  */
 
 return [
+    'deployment' => [
+        'mode' => 'standalone',                       // 'standalone' | 'revizior_managed'
+        'public_name' => 'MyInvoice.cz',              // user-visible product name; internal identifiers stay MyInvoice
+        'revizior' => [
+            'app_url' => null,                        // managed only: trusted HTTPS target for "Back to ReviziOR"
+            'allowed_return_hosts' => [],             // optional exact host allowlist, e.g. ['app.revizior.cz']
+        ],
+    ],
     'app' => [
         'env'    => 'production',                    // 'development' | 'production' (řídí debug výpisy, error reporting). Nikdy nedávat 'development' na veřejně dostupný server.
         'debug'  => false,                           // false v produkci — skryje stack trace v API odpovědích

@@ -291,6 +291,11 @@
     "scan_done": "Rozpoznáno {n} tankování ({parser}).",
     "scan_updated": "Doplněny údaje (litry) u {n} tankování."
   },
+  "managed": {
+    "back_to_revizior": "Zpět do ReviziORu",
+    "sign_in_via_revizior": "Přihlášení a přístup k firmě spravuje ReviziOR.",
+    "return_unavailable": "Návrat do ReviziORu není nakonfigurován. Kontaktujte správce."
+  },
   "nav": {
     "dashboard": "Přehled", "invoices": "Vydané faktury", "clients": "Klienti",
     "projects": "Zakázky", "stats": "Tržby", "purchase_stats": "Náklady", "bank": "Banka", "system": "Systém", "section_taxes": "Daně",

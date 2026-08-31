@@ -2,6 +2,7 @@ import { createRouter, createWebHistory, type RouteRecordRaw } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { useSupplierStore } from '@/stores/supplier'
 import { useSessionSecurityStore } from '@/stores/sessionSecurity'
+import type { DeploymentModule } from '@/api/auth'
 
 const routes: RouteRecordRaw[] = [
   {
@@ -23,19 +24,19 @@ const routes: RouteRecordRaw[] = [
       { path: 'invoices/:id(\\d+)',     name: 'invoice-detail', component: () => import('@/pages/invoices/InvoiceDetail.vue') },
       { path: 'invoices/:id(\\d+)/edit', name: 'invoice-edit',  component: () => import('@/pages/invoices/InvoiceEditor.vue'), meta: { requiresWrite: true, requiresSupplier: true } },
       // Přijaté faktury (fáze 1 integrace forku)
-      { path: 'purchase-invoices',                 name: 'purchase-invoices',        component: () => import('@/pages/purchase-invoices/InvoiceList.vue') },
-      { path: 'purchase-invoices/export',          name: 'purchase-invoices-export', component: () => import('@/pages/purchase-invoices/Export.vue') },
-      { path: 'purchase-invoices/payment-orders',  name: 'purchase-invoices-payment-orders', component: () => import('@/pages/purchase-invoices/PaymentOrders.vue') },
-      { path: 'purchase-invoices/new',             name: 'purchase-invoice-new',     component: () => import('@/pages/purchase-invoices/InvoiceEditor.vue'), meta: { requiresWrite: true, requiresSupplier: true } },
-      { path: 'purchase-invoices/:id(\\d+)',       name: 'purchase-invoice-detail',  component: () => import('@/pages/purchase-invoices/InvoiceDetail.vue') },
-      { path: 'purchase-invoices/:id(\\d+)/edit',  name: 'purchase-invoice-edit',    component: () => import('@/pages/purchase-invoices/InvoiceEditor.vue'), meta: { requiresWrite: true, requiresSupplier: true } },
+      { path: 'purchase-invoices',                 name: 'purchase-invoices',        component: () => import('@/pages/purchase-invoices/InvoiceList.vue'), meta: { module: 'purchaseInvoices' } },
+      { path: 'purchase-invoices/export',          name: 'purchase-invoices-export', component: () => import('@/pages/purchase-invoices/Export.vue'), meta: { module: 'purchaseInvoices' } },
+      { path: 'purchase-invoices/payment-orders',  name: 'purchase-invoices-payment-orders', component: () => import('@/pages/purchase-invoices/PaymentOrders.vue'), meta: { module: 'purchaseInvoices' } },
+      { path: 'purchase-invoices/new',             name: 'purchase-invoice-new',     component: () => import('@/pages/purchase-invoices/InvoiceEditor.vue'), meta: { requiresWrite: true, requiresSupplier: true, module: 'purchaseInvoices' } },
+      { path: 'purchase-invoices/:id(\\d+)',       name: 'purchase-invoice-detail',  component: () => import('@/pages/purchase-invoices/InvoiceDetail.vue'), meta: { module: 'purchaseInvoices' } },
+      { path: 'purchase-invoices/:id(\\d+)/edit',  name: 'purchase-invoice-edit',    component: () => import('@/pages/purchase-invoices/InvoiceEditor.vue'), meta: { requiresWrite: true, requiresSupplier: true, module: 'purchaseInvoices' } },
       // Dokumenty (sekce Dokumenty — plán source/11)
-      { path: 'documents',              name: 'documents',        component: () => import('@/pages/documents/DocumentsBrowser.vue') },
-      { path: 'documents/:id(\\d+)',    name: 'document-detail',  component: () => import('@/pages/documents/DocumentDetail.vue') },
+      { path: 'documents',              name: 'documents',        component: () => import('@/pages/documents/DocumentsBrowser.vue'), meta: { module: 'documents' } },
+      { path: 'documents/:id(\\d+)',    name: 'document-detail',  component: () => import('@/pages/documents/DocumentDetail.vue'), meta: { module: 'documents' } },
       // Kniha jízd (logbook) — auta, jízdy, tankování
-      { path: 'logbook',                name: 'logbook',          component: () => import('@/pages/logbook/LogbookPage.vue') },
+      { path: 'logbook',                name: 'logbook',          component: () => import('@/pages/logbook/LogbookPage.vue'), meta: { module: 'logbook' } },
       { path: 'stats',                  name: 'stats',           component: () => import('@/pages/Stats.vue') },
-      { path: 'purchase-stats',         name: 'purchase-stats',  component: () => import('@/pages/PurchaseStats.vue') },
+      { path: 'purchase-stats',         name: 'purchase-stats',  component: () => import('@/pages/PurchaseStats.vue'), meta: { module: 'purchaseInvoices' } },
       // Sjednocená stránka „Bankovní účty" (Finance): výpisy + měny/účty + stavy + avíza.
       { path: 'bank',                   name: 'bank-statements', component: () => import('@/pages/bank/BankPage.vue') },
       { path: 'bank/:id(\\d+)',         name: 'bank-detail',     component: () => import('@/pages/bank/StatementDetail.vue') },
@@ -68,15 +69,15 @@ const routes: RouteRecordRaw[] = [
       { path: 'admin/import',           name: 'admin-import',    component: () => import('@/pages/admin/Imports.vue'),    meta: { requiresWrite: true, requiresSupplier: true } },
       { path: 'admin/integrations',     name: 'admin-integrations', component: () => import('@/pages/admin/Integrations.vue'), meta: { adminOnly: true } },
       { path: 'crm',                    name: 'crm-dashboard',      component: () => import('@/pages/crm/CrmDashboard.vue') },
-      { path: 'reports/dph',            name: 'reports-dph',        component: () => import('@/pages/reports/DphPriznaniReport.vue') },
-      { path: 'reports/kh',             name: 'reports-kh',         component: () => import('@/pages/reports/KontrolniHlaseniReport.vue') },
-      { path: 'reports/dph-book',       name: 'reports-dph-book',   component: () => import('@/pages/reports/DphBookReport.vue') },
-      { path: 'reports/shv',            name: 'reports-shv',        component: () => import('@/pages/reports/SouhrnneHlaseniReport.vue') },
-      { path: 'reports/income-tax',     name: 'reports-income-tax', component: () => import('@/pages/reports/IncomeTaxReport.vue') },
-      { path: 'reports/submissions',    name: 'reports-submissions', component: () => import('@/pages/reports/TaxSubmissions.vue') },
-      { path: 'reports/monthly-export', name: 'reports-monthly-export', component: () => import('@/pages/reports/MonthlyExportReport.vue') },
-      { path: 'reports/oss',            name: 'reports-oss',        component: () => import('@/pages/reports/OssReport.vue'), meta: { requiresOss: true } },
-      { path: 'tax',                    name: 'tax-optimizer',      component: () => import('@/pages/tax/TaxOptimizer.vue') },
+      { path: 'reports/dph',            name: 'reports-dph',        component: () => import('@/pages/reports/DphPriznaniReport.vue'), meta: { module: 'tax' } },
+      { path: 'reports/kh',             name: 'reports-kh',         component: () => import('@/pages/reports/KontrolniHlaseniReport.vue'), meta: { module: 'tax' } },
+      { path: 'reports/dph-book',       name: 'reports-dph-book',   component: () => import('@/pages/reports/DphBookReport.vue'), meta: { module: 'tax' } },
+      { path: 'reports/shv',            name: 'reports-shv',        component: () => import('@/pages/reports/SouhrnneHlaseniReport.vue'), meta: { module: 'tax' } },
+      { path: 'reports/income-tax',     name: 'reports-income-tax', component: () => import('@/pages/reports/IncomeTaxReport.vue'), meta: { module: 'tax' } },
+      { path: 'reports/submissions',    name: 'reports-submissions', component: () => import('@/pages/reports/TaxSubmissions.vue'), meta: { module: 'tax' } },
+      { path: 'reports/monthly-export', name: 'reports-monthly-export', component: () => import('@/pages/reports/MonthlyExportReport.vue'), meta: { module: 'tax' } },
+      { path: 'reports/oss',            name: 'reports-oss',        component: () => import('@/pages/reports/OssReport.vue'), meta: { requiresOss: true, module: 'tax' } },
+      { path: 'tax',                    name: 'tax-optimizer',      component: () => import('@/pages/tax/TaxOptimizer.vue'), meta: { module: 'tax' } },
       { path: 'admin/email-templates',  name: 'admin-email-templates', component: () => import('@/pages/admin/EmailTemplates.vue'), meta: { adminOnly: true } },
       // Sekce E-maily — záložky: Odeslané / Šablony / Elektronické podpisy (vzor Codebooks)
       { path: 'admin/emails',           name: 'admin-emails',    component: () => import('@/pages/admin/Emails.vue'), meta: { adminOnly: true } },
@@ -88,8 +89,8 @@ const routes: RouteRecordRaw[] = [
       { path: 'recurring/new',          name: 'recurring-new',    component: () => import('@/pages/recurring/RecurringForm.vue'), meta: { requiresWrite: true, requiresSupplier: true } },
       { path: 'recurring/:id(\\d+)',    name: 'recurring-detail', component: () => import('@/pages/recurring/RecurringDetail.vue') },
       { path: 'recurring/:id(\\d+)/edit', name: 'recurring-edit', component: () => import('@/pages/recurring/RecurringForm.vue'), meta: { requiresWrite: true, requiresSupplier: true } },
-      { path: 'admin/update',           name: 'admin-update',    component: () => import('@/pages/admin/Update.vue'),    meta: { adminOnly: true } },
-      { path: 'admin/upgrade',          name: 'admin-myucto-upgrade', component: () => import('@/pages/admin/MyuctoUpgrade.vue'), meta: { adminOnly: true } },
+      { path: 'admin/update',           name: 'admin-update',    component: () => import('@/pages/admin/Update.vue'),    meta: { adminOnly: true, module: 'selfUpdate' } },
+      { path: 'admin/upgrade',          name: 'admin-myucto-upgrade', component: () => import('@/pages/admin/MyuctoUpgrade.vue'), meta: { adminOnly: true, module: 'myuctoUpgrade' } },
       // Staré profilové URL zůstávají funkční, ale UI je zobrazuje jako záložky
       // na /profile/password. Redirecty zachovávají ostatní query stringy.
       { path: 'profile/totp',           name: 'profile-totp',          redirect: (to) => ({ path: '/profile/password', query: { ...to.query, tab: 'totp' } }) },
@@ -106,6 +107,7 @@ const routes: RouteRecordRaw[] = [
   { path: '/setup-totp', name: 'setup-totp', redirect: { path: '/setup-mfa', query: { method: 'totp' } } },
   { path: '/forgot', name: 'forgot', component: () => import('@/pages/ForgotPassword.vue'), meta: { public: true } },
   { path: '/reset',  name: 'reset',  component: () => import('@/pages/ResetPassword.vue'),  meta: { public: true } },
+  { path: '/managed', name: 'managed-entry', component: () => import('@/pages/ManagedEntry.vue'), meta: { public: true } },
   { path: '/approval/:token([a-f0-9]{32,128})', name: 'approval',
     component: () => import('@/pages/ApprovalPublic.vue'), meta: { public: true } },
   { path: '/work-report/:token([a-f0-9]{32,128})', name: 'work-report-tracking',
@@ -157,7 +159,20 @@ router.beforeEach(async (to) => {
     return { name: 'setup' }
   }
   if (!auth.needsSetup && to.name === 'setup') {
+    return { name: auth.isManaged ? 'managed-entry' : 'login' }
+  }
+
+  if (auth.isManaged && ['login', 'forgot', 'reset'].includes(String(to.name))) {
+    return { name: 'managed-entry' }
+  }
+  if (!auth.isManaged && to.name === 'managed-entry') {
     return { name: 'login' }
+  }
+
+  const requiredModule = to.matched.find((r) => typeof r.meta.module === 'string')?.meta.module
+  if (typeof requiredModule === 'string'
+      && !auth.moduleEnabled(requiredModule as DeploymentModule)) {
+    return denyFallback(to.name)
   }
 
   const requiresAuth = to.matched.some((r) => r.meta.requiresAuth)

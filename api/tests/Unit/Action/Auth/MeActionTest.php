@@ -12,6 +12,7 @@ use MyInvoice\Middleware\SupplierScopeMiddleware;
 use MyInvoice\Repository\PasskeyCredentialRepository;
 use MyInvoice\Service\Auth\MfaPolicyService;
 use MyInvoice\Service\Auth\SessionLockPolicy;
+use MyInvoice\Service\Deployment\DeploymentCapabilities;
 use PHPUnit\Framework\Attributes\AllowMockObjectsWithoutExpectations;
 use PHPUnit\Framework\TestCase;
 use Psr\Clock\ClockInterface;
@@ -66,6 +67,7 @@ final class MeActionTest extends TestCase
             new MfaPolicyService($config),
             new SessionLockPolicy($config),
             $clock,
+            new DeploymentCapabilities($config),
         );
         $request = (new ServerRequestFactory())
             ->createServerRequest('GET', '/api/auth/me')
@@ -100,5 +102,6 @@ final class MeActionTest extends TestCase
         self::assertSame('2026-07-24T12:00:00.000000Z', $body['server_time']);
         self::assertSame('2026-07-24T12:03:00.000000Z', $body['idle_expires_at']);
         self::assertSame(str_repeat('b', 64), $body['csrf_token']);
+        self::assertSame('standalone', $body['deploymentMode']);
     }
 }

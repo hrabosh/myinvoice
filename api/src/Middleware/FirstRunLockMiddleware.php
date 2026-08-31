@@ -6,6 +6,7 @@ namespace MyInvoice\Middleware;
 
 use MyInvoice\Http\Json;
 use MyInvoice\Infrastructure\Database\Connection;
+use MyInvoice\Service\Deployment\DeploymentCapabilities;
 use Psr\Http\Message\ResponseInterface as Response;
 use Psr\Http\Message\ServerRequestInterface as Request;
 use Psr\Http\Server\MiddlewareInterface;
@@ -36,6 +37,7 @@ final class FirstRunLockMiddleware implements MiddlewareInterface
     public function __construct(
         private readonly Connection $db,
         private readonly ResponseFactory $responseFactory,
+        private readonly DeploymentCapabilities $capabilities,
     ) {}
 
     public function process(Request $request, Handler $handler): Response
@@ -60,6 +62,10 @@ final class FirstRunLockMiddleware implements MiddlewareInterface
 
     public function needsSetup(): bool
     {
+        if (!$this->capabilities->allowsFirstRunSetup()) {
+            return false;
+        }
+
         if ($this->needsSetupCache !== null) {
             return $this->needsSetupCache;
         }

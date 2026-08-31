@@ -11,6 +11,7 @@ import GlobalSearch from './GlobalSearch.vue'
 import ThemeToggle from './ThemeToggle.vue'
 import { useSessionSecurityStore } from '@/stores/sessionSecurity'
 import { useToast } from '@/composables/useToast'
+import type { DeploymentModule } from '@/api/auth'
 
 const { t, locale } = useI18n()
 function setLocale(l: 'cs' | 'en') {
@@ -34,6 +35,22 @@ const logoutBusy = ref(false)
 const canLockSession = computed(() => sessionSecurity.state?.session_state === 'active'
   && sessionSecurity.state.unlock_methods.includes('passkey'))
 let signingSettingsRequest = 0
+
+function navigationItemEnabled(to: string) {
+  const path = to.split('?', 1)[0]
+  if (to.includes('role=vendor')) return auth.moduleEnabled('purchaseInvoices')
+  if (path.startsWith('/purchase-invoices') || path === '/purchase-stats') {
+    return auth.moduleEnabled('purchaseInvoices')
+  }
+  if (path.startsWith('/reports/') || path === '/tax') {
+    return auth.moduleEnabled('tax')
+  }
+  if (path.startsWith('/logbook')) return auth.moduleEnabled('logbook')
+  if (path.startsWith('/documents')) return auth.moduleEnabled('documents')
+  if (path === '/admin/update') return auth.moduleEnabled('selfUpdate')
+  if (path === '/admin/upgrade') return auth.moduleEnabled('myuctoUpgrade')
+  return true
+}
 
 async function logout() {
   if (logoutBusy.value) return
@@ -91,6 +108,7 @@ interface NavSection {
   title?: string
   /** Color accent pro vertikální pruh + text. Tailwind utility class group. */
   accent?: 'primary' | 'warning' | 'success' | 'danger' | 'neutral'
+  module?: DeploymentModule
   items: NavItem[]
 }
 
@@ -178,6 +196,7 @@ const navSections = computed<NavSection[]>(() => {
     {
       title: t('nav.section_purchase'),
       accent: 'warning',
+      module: 'purchaseInvoices',
       items: [
         { to: '/purchase-invoices',          label: t('nav.purchase_invoices'),  icon: ICONS.purchase, newTo: '/purchase-invoices/new' },
         { to: '/clients?role=vendors',       label: t('nav.vendors'),            icon: ICONS.suppliers, newTo: '/clients/new?role=vendor' },
@@ -209,6 +228,7 @@ const navSections = computed<NavSection[]>(() => {
     {
       title: t('nav.section_taxes'),
       accent: 'danger',
+      module: 'tax',
       items: [
         { to: '/reports/dph',         label: t('nav.reports_dph'),         icon: ICONS.tax_dph },
         { to: '/reports/kh',          label: t('nav.reports_kh'),          icon: ICONS.tax_kh },
@@ -262,6 +282,8 @@ const navSections = computed<NavSection[]>(() => {
   })
 
   return sections
+    .map(section => ({ ...section, items: section.items.filter(item => navigationItemEnabled(item.to)) }))
+    .filter(section => section.items.length > 0 && (!section.module || auth.moduleEnabled(section.module)))
 })
 
 /** Rychlé zkratky v topbaru (desktop) — ikony navazují na menu (ICONS). */
@@ -274,7 +296,7 @@ const quickActions = computed(() => [
   { to: '/purchase-invoices/new', label: t('nav.quick_purchase'), icon: ICONS.purchase },
   { to: '/logbook?tab=trips&new=trip', label: t('nav.quick_trip'),    icon: ICONS.logbook },
   { to: '/logbook?tab=fuel&new=fuel',  label: t('nav.quick_fueling'), icon: ICONS.fuel },
-])
+].filter(action => navigationItemEnabled(action.to)))
 
 /** Ploché položky menu pro globální search (našeptávač skáče přímo na body menu). */
 const flatNavItems = computed(() =>
@@ -348,7 +370,9 @@ watch(() => route.path, () => { mobileOpen.value = false; quickOpen.value = fals
 
 const versionInfo = ref<PublicVersion | null>(null)
 onMounted(async () => {
-  try { versionInfo.value = await updateApi.publicVersion() } catch {}
+  if (auth.moduleEnabled('selfUpdate')) {
+    try { versionInfo.value = await updateApi.publicVersion() } catch {}
+  }
 })
 </script>
 
@@ -360,14 +384,22 @@ onMounted(async () => {
       <div class="h-14 px-4 flex items-center justify-between gap-3">
         <!-- Logo -->
         <RouterLink to="/" class="flex items-center gap-2.5 shrink-0" @click="mobileOpen = false">
-          <img src="/styles/logo.svg" alt="MyInvoice" class="w-8 h-8" />
-          <span class="text-sm font-semibold leading-tight select-none">
+          <img src="/styles/logo.svg" :alt="auth.productName" class="w-8 h-8" />
+          <span v-if="auth.isManaged" class="text-sm font-semibold leading-tight select-none text-primary-700">
+            {{ auth.productName }}
+          </span>
+          <span v-else class="text-sm font-semibold leading-tight select-none">
             My<span class="text-primary-600">Invoice</span><span class="text-neutral-400 font-normal">.cz</span>
           </span>
         </RouterLink>
 
         <!-- Pravá strana topbaru -->
         <div class="flex items-center gap-2 text-sm">
+          <a
+            v-if="auth.returnUrl"
+            :href="auth.returnUrl"
+            class="hidden md:inline-flex h-8 items-center rounded-md border border-primary-200 px-3 text-sm font-medium text-primary-700 hover:bg-primary-50"
+          >{{ t('managed.back_to_revizior') }}</a>
           <!-- Rychlé vytvoření (desktop, jen pro zapisující) — jedno decentní tlačítko s menu -->
           <div v-if="auth.canWrite" class="relative hidden lg:block">
             <button
@@ -595,7 +627,7 @@ onMounted(async () => {
              class="text-xs text-neutral-500 hover:text-primary-700 hover:underline transition-colors"
              title="MyInvoice.cz">MyInvoice.cz</a>
           <RouterLink
-            v-if="auth.user?.role === 'admin'"
+            v-if="auth.user?.role === 'admin' && auth.moduleEnabled('selfUpdate')"
             to="/admin/update"
             class="inline-flex items-center gap-1.5 text-xs text-neutral-400 hover:text-neutral-600 transition-colors"
             :title="t('updates.title')"
@@ -702,14 +734,14 @@ onMounted(async () => {
           <span aria-hidden="true">·</span>
           <button type="button" @click="supportOpen = true"
                   class="cursor-pointer text-primary-600 hover:text-primary-700 font-medium">{{ t('support.author_link') }}</button>
-          <RouterLink v-if="auth.user?.role === 'admin'" to="/admin/upgrade"
+          <RouterLink v-if="auth.user?.role === 'admin' && auth.moduleEnabled('myuctoUpgrade')" to="/admin/upgrade"
                   class="cursor-pointer ml-1.5 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-primary-600 text-white text-xs font-semibold shadow-sm hover:bg-primary-700 hover:shadow transition-colors">
             <svg class="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true">
               <path stroke-linecap="round" stroke-linejoin="round" d="M13 7l5 5m0 0l-5 5m5-5H6" />
             </svg>
             <span>{{ t('support.myucto_link') }}</span>
           </RouterLink>
-          <button v-else type="button" @click="myuctoOpen = true"
+          <button v-else-if="!auth.isManaged" type="button" @click="myuctoOpen = true"
                   class="cursor-pointer ml-1.5 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-primary-600 text-white text-xs font-semibold shadow-sm hover:bg-primary-700 hover:shadow transition-colors">
             <svg class="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true">
               <path stroke-linecap="round" stroke-linejoin="round" d="M13 7l5 5m0 0l-5 5m5-5H6" />

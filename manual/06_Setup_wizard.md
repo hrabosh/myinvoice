@@ -7,6 +7,11 @@ endpoint kromě setup endpointů a healthchecku neodpovídá. Wizard je jednorá
 Wizard má **3 kroky** (admin → dodavatel → sample data) a po dokončení tě
 **automaticky přihlásí**.
 
+> 🛈 V řízené instalaci **ReviziOR Fakturace** se veřejný setup wizard
+> nepoužívá. Firmu i uživatele zakládá ReviziOR a aplikace nabídne bezpečný
+> odkaz **Zpět do ReviziORu**. Pokud se v tomto režimu setup zobrazí, kontaktuj
+> správce nasazení.
+
 ## 6.1 Krok 1 — Administrátor
 
 ![Setup wizard krok 1](img/03_setup_admin.webp)

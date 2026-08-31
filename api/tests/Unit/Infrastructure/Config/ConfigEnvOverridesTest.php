@@ -129,6 +129,24 @@ PHP);
         self::assertFalse($cfg->get('auth.passwordless_login.enabled'));
     }
 
+    public function testManagedDeploymentEnvironmentOverridesApply(): void
+    {
+        $this->setEnv('MYINVOICE_DEPLOYMENT_MODE', 'revizior_managed');
+        $this->setEnv('MYINVOICE_PUBLIC_NAME', 'ReviziOR Fakturace');
+        $this->setEnv('MYINVOICE_REVIZIOR_APP_URL', 'https://app.revizior.cz/fakturace');
+        $this->setEnv('MYINVOICE_REVIZIOR_ALLOWED_RETURN_HOSTS', ' app.revizior.cz,admin.revizior.cz ');
+
+        $cfg = Config::load($this->tmpDir);
+
+        self::assertSame('revizior_managed', $cfg->get('deployment.mode'));
+        self::assertSame('ReviziOR Fakturace', $cfg->get('deployment.public_name'));
+        self::assertSame('https://app.revizior.cz/fakturace', $cfg->get('deployment.revizior.app_url'));
+        self::assertSame(
+            ['app.revizior.cz', 'admin.revizior.cz'],
+            $cfg->get('deployment.revizior.allowed_return_hosts'),
+        );
+    }
+
     public function testInvalidSessionLockEnvironmentOverrideIsPreservedForPolicyValidation(): void
     {
         $this->setEnv('MYINVOICE_SESSION_LOCK_AFTER_MINUTES', '15 minutes');

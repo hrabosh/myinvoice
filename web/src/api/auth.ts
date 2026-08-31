@@ -37,7 +37,28 @@ export interface SupplierBrief {
   payment_thanks_default_checked: boolean
 }
 
-export interface SetupStatus {
+export type DeploymentModule =
+  | 'salesInvoices'
+  | 'clients'
+  | 'projects'
+  | 'priceList'
+  | 'bank'
+  | 'documents'
+  | 'purchaseInvoices'
+  | 'tax'
+  | 'payroll'
+  | 'logbook'
+  | 'selfUpdate'
+  | 'myuctoUpgrade'
+
+export interface DeploymentContext {
+  deploymentMode: 'standalone' | 'revizior_managed'
+  productName: string
+  modules: Record<DeploymentModule, boolean>
+  returnUrl: string | null
+}
+
+export interface SetupStatus extends DeploymentContext {
   needs_setup: boolean
   version: string
   passwordless_login_enabled: boolean
@@ -107,7 +128,7 @@ export interface AuthSessionContract {
   lock_after_minutes: number
 }
 
-export interface MeResponse extends AuthSessionContract {
+export interface MeResponse extends AuthSessionContract, DeploymentContext {
   current_supplier_id: number
   suppliers: SupplierBrief[]
 }

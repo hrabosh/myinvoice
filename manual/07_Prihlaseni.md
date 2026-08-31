@@ -1,5 +1,9 @@
 # 7. Přihlášení a uživatelský profil
 
+> 🛈 V řízené instalaci **ReviziOR Fakturace** jsou místní přihlášení i obnova
+> hesla vypnuté. Do fakturace vstupuj z ReviziORu; návrat vede přes
+> nakonfigurované tlačítko **Zpět do ReviziORu**, ne přes adresu z URL parametru.
+
 ## 7.1 Přihlášení
 
 ![Přihlašovací obrazovka](img/04_login.webp)

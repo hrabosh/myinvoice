@@ -12,6 +12,7 @@ use MyInvoice\Middleware\SupplierScopeMiddleware;
 use MyInvoice\Repository\PasskeyCredentialRepository;
 use MyInvoice\Service\Auth\MfaPolicyService;
 use MyInvoice\Service\Auth\SessionLockPolicy;
+use MyInvoice\Service\Deployment\DeploymentCapabilities;
 use Psr\Clock\ClockInterface;
 use Psr\Http\Message\ResponseInterface as Response;
 use Psr\Http\Message\ServerRequestInterface as Request;
@@ -26,6 +27,7 @@ final class MeAction
         private readonly MfaPolicyService $mfaPolicy,
         private readonly SessionLockPolicy $lockPolicy,
         private readonly ClockInterface $clock,
+        private readonly DeploymentCapabilities $capabilities,
     ) {}
 
     public function __invoke(Request $request, Response $response): Response
@@ -109,7 +111,7 @@ final class MeAction
                 : null;
         }
 
-        return Json::ok($response, [
+        return Json::ok($response, array_merge([
             'user' => [
                 'id'              => $userId,
                 'email'           => $user['email'] ?? '',
@@ -133,7 +135,7 @@ final class MeAction
             'lock_after_minutes'  => $effectiveTimeout,
             'server_time'         => self::isoUtc($now),
             'idle_expires_at'     => $idleExpiresAt,
-        ]);
+        ], $this->capabilities->publicPayload()));
     }
 
     private static function tryParseUtc(string $time): ?\DateTimeImmutable

@@ -204,6 +204,14 @@ final class Config
     private static function baselineDefaults(): array
     {
         return [
+            'deployment' => [
+                'mode' => 'standalone',
+                'public_name' => 'MyInvoice.cz',
+                'revizior' => [
+                    'app_url' => null,
+                    'allowed_return_hosts' => [],
+                ],
+            ],
             'session' => [
                 'lock_after_minutes' => 0,
             ],
@@ -257,6 +265,10 @@ final class Config
             'MYINVOICE_SECRET_KEY'  => ['app.secret_encryption_key', 'string'],
             'MYINVOICE_TIMEZONE'    => ['app.timezone', 'string'],
             'MYINVOICE_LOCALE'      => ['app.locale_default', 'string'],
+            'MYINVOICE_DEPLOYMENT_MODE' => ['deployment.mode', 'string'],
+            'MYINVOICE_PUBLIC_NAME' => ['deployment.public_name', 'string'],
+            'MYINVOICE_REVIZIOR_APP_URL' => ['deployment.revizior.app_url', 'string'],
+            'MYINVOICE_REVIZIOR_ALLOWED_RETURN_HOSTS' => ['deployment.revizior.allowed_return_hosts', 'csv'],
 
             // Database (jednotlivé klíče i kompozitní DATABASE_URL)
             'MYINVOICE_DB_HOST'    => ['db.host', 'string'],

@@ -291,6 +291,11 @@
     "scan_done": "Recognized {n} refuellings ({parser}).",
     "scan_updated": "Filled in details (liters) for {n} refuellings."
   },
+  "managed": {
+    "back_to_revizior": "Back to ReviziOR",
+    "sign_in_via_revizior": "Sign-in and company access are managed by ReviziOR.",
+    "return_unavailable": "The ReviziOR return link is not configured. Contact your administrator."
+  },
   "nav": {
     "dashboard": "Dashboard", "invoices": "Issued invoices", "clients": "Clients",
     "projects": "Projects", "stats": "Sales", "purchase_stats": "Costs", "bank": "Bank", "system": "System", "section_taxes": "Taxes",
