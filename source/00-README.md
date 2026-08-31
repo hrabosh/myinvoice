@@ -53,11 +53,22 @@ Multi-supplier fakturační systém (jedna instalace = N dodavatelů / IČO s iz
 | 05 | [`05-design.md`](05-design.md) | **Design system** — paleta (emerald/zinc), typografie (Inter + Geist Mono), komponenty, wireframy, SVG logo (zdroj v `/styles/logo.svg`) |
 | 06 | [`06-roadmap.md`](06-roadmap.md) | **Plán implementace** — milníky M0-M6, akceptační kritéria, rizika, mimo-scope |
 
+## Specializované integrační plány
+
+| Plán | Obsah | Stav |
+|---|---|---|
+| [`revizior-integration/`](revizior-integration/) | **Kanonické zadání managed nasazení na `fakturace.revizior.cz`**: tenantové role, service API, idempotentní drafty, jednorázové SSO, přílohy, event outbox, bezpečnost, provoz a cross-repo roadmapa s `hrabosh/backend`. | 🟡 implementation-ready |
+
+Managed ReviziOR režim je aditivní overlay. Nemění fakturační zdroj pravdy ani základní
+standalone rozhodnutí. Rozšiřuje per-supplier oprávnění o `supplier_owner`, která není globální
+admin rolí, a drží integrační kód odděleně kvůli bezpečnosti a upstream mergeovatelnosti.
+
 ## Doporučený postup čtení
 
 1. **Nový vývojář:** `00 → 01 → 03 → 02 → 04 → 05 → 06`
 2. **Implementace:** vezmi M0 z `06-roadmap.md`, koukni do `03-architecture.md` (struktura) + `02-database.md` (migrace), pak `04-api.md` (endpointy)
 3. **UI/UX:** `05-design.md` + wireframy v `01-spec.md` kapitola 4
+4. **ReviziOR managed integrace:** nejdřív [`revizior-integration/README.md`](revizior-integration/README.md), potom dokumenty `01 → 04`; paralelně číst consumer plán v `hrabosh/backend/docs/features/revizior-invoicing/`
 
 ## Konvence
 
