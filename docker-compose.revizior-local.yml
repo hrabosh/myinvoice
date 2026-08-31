@@ -1,0 +1,24 @@
+# Local bridge between ReviziOR backend and ReviziOR Fakturace.
+#
+# Usage:
+#   cmd/docker-revizior-local.sh
+#   # or on Windows:
+#   .\cmd\docker-revizior-local.ps1
+#
+# The backend can then reach this app as http://revizior-invoice.local.
+# The app remains on Compose's default network as well, because it needs its
+# private MariaDB service there.
+
+services:
+  app:
+    networks:
+      default:
+      revizior:
+        aliases:
+          - revizior-invoice.local
+
+networks:
+  default:
+  revizior:
+    external: true
+    name: ${REVIZIOR_DOCKER_NETWORK:-backend_revizor}
