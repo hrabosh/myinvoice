@@ -2,7 +2,7 @@
     "name": "myinvoice/api",
     "description": "MyInvoice.cz — fakturační systém (PHP backend)",
     "type": "project",
-    "license": "proprietary",
+    "license": "MIT",
     "require": {
         "php": "^8.5",
         "ext-json": "*",

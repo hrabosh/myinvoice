@@ -1,0 +1,22 @@
+{
+  "specVersion": "1.0",
+  "companyName": "Example Client s.r.o.",
+  "registrationNumber": "00000019",
+  "vatNumber": null,
+  "address": {
+    "street": "Zkušební 10",
+    "city": "Praha",
+    "postalCode": "11000",
+    "countryCode": "CZ"
+  },
+  "contacts": [
+    {
+      "type": "billing",
+      "email": "billing@example.invalid",
+      "name": "Testovací kontakt"
+    }
+  ],
+  "language": "cs",
+  "active": true,
+  "sourceUpdatedAt": "2026-08-31T10:00:00Z"
+}

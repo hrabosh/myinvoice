@@ -1,0 +1,19 @@
+{
+  "specVersion": "1.0",
+  "algorithm": "sha256-canonical-json-v1",
+  "fixtures": {
+    "capabilities.json": "sha256:3465c499bc6eec5fd4a1bb6e302d486d6efea6789f3cef24142a75bd20120fa2",
+    "client-upsert-request.json": "sha256:d3e4df6808108e3025ca72bcabde89fa4bba566543bc0ceae96911daece23c70",
+    "client-upsert-response.json": "sha256:a7d5b12a4ed9eafd1272c965ee95ad762ecff41f3a6e3905426e1f371deb1927",
+    "errors/validation-failed.json": "sha256:ff32d40525e7f4cd568b6a23a77fcbe3b0968dc26d4d4c1cd05709bc74beee01",
+    "events/invoice-issued.json": "sha256:5f3adcf62c0ac35a28b7ce4f23c7b5af87771d8e07a23f99f1a249608067cd48",
+    "invoice-draft-request.json": "sha256:dd5a51607857c27411f3e0946e80442972b025dbf8ffd921c98da9c79ea6eef8",
+    "invoice-snapshot.json": "sha256:4cd9a62b9a18c941805463e0188c3d44348b8571b9f961fb3d4b900668af4d8d",
+    "organization-update.json": "sha256:108f3c7c95ed3a780e46ea6134b5fc4f4d30a62b74aa92a7842abae2f80f6918",
+    "price-resolve-request.json": "sha256:48cc31f2fa8c9b0e4ec1353f41ca3601967dd81915c94c22966dec250af6d63e",
+    "price-resolve-response.json": "sha256:b595c234d049f38d76394fb4934c1d324c568683f84aab3043a6030d7fe00d73",
+    "provision-request.json": "sha256:f2740cf04fbb7cb9c535eb9521301f7b7503f02601a334bcbb88bdff194c44e2",
+    "provision-response.json": "sha256:30600c1d57866a9dddabfbfc14dd1964b7051003d20deb5eb59d2519980a07cd",
+    "user-upsert.json": "sha256:bd40f01c299a1802339e0e0bc82ece43a5e1c214d67aebe32173c0500fdd4c5e"
+  }
+}

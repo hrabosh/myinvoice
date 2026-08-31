@@ -1,0 +1,29 @@
+{
+  "specVersion": "1.0",
+  "data": {
+    "contractVersion": "1.0",
+    "deploymentMode": "revizior_managed",
+    "features": {
+      "organizationProvisioning": true,
+      "userProvisioning": true,
+      "clientUpsert": true,
+      "priceResolution": true,
+      "invoiceDraft": true,
+      "attachments": true,
+      "sso": true,
+      "proforma": true,
+      "creditNote": true,
+      "partialPayments": true,
+      "eventOutbox": true
+    },
+    "limits": {
+      "maxItemsPerInvoice": 500,
+      "maxAttachmentBytes": 20971520,
+      "maxRequestBytes": 2097152
+    }
+  },
+  "meta": {
+    "contractVersion": "1.0",
+    "requestId": "10000000-0000-4000-8000-000000000001"
+  }
+}

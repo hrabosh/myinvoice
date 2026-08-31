@@ -1,0 +1,15 @@
+{
+  "specVersion": "1.0",
+  "data": {
+    "organizationUuid": "30000000-0000-4000-8000-000000000001",
+    "supplierId": "123",
+    "status": "onboarding",
+    "onboardingState": "incomplete",
+    "configurePath": "/settings/supplier",
+    "payloadHash": "sha256:f2740cf04fbb7cb9c535eb9521301f7b7503f02601a334bcbb88bdff194c44e2"
+  },
+  "meta": {
+    "contractVersion": "1.0",
+    "requestId": "10000000-0000-4000-8000-000000000002"
+  }
+}

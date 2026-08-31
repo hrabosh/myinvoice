@@ -66,6 +66,10 @@ pouze UX pravidlo, ale bezpečnostní hranice se samostatnými integračními a 
 | [`02-service-api-sso-and-events.md`](02-service-api-sso-and-events.md) | Service assertion, endpointy v1, idempotence, SSO, přílohy a podepsaný event kontrakt |
 | [`03-database-security-and-operations.md`](03-database-security-and-operations.md) | Databázové tabulky, transakce, replay ochrana, threat model, provoz, backupy a upstream |
 | [`04-roadmap-and-acceptance.md`](04-roadmap-and-acceptance.md) | Fázované PR, využití existujícího kódu, testovací matice, cutover a Definition of Done |
+| [`r0-baseline.md`](r0-baseline.md) | Přesné upstream/fork commity, ověřovací příkazy, characterization mapa a další číslo migrace |
+| [`r1-managed-mode.md`](r1-managed-mode.md) | Implementovaný deployment/capability slice R1, konfigurace, ověření a zbývající permission práce |
+| [`licensing-decision.md`](licensing-decision.md) | MIT provenance, third-party gate a bezpečnostní volba JOSE/JWT knihovny |
+| [`contract/v1/`](contract/v1/) | Kanonické cross-repo JSON fixtures a jejich deterministické SHA-256 hashe |
 
 ## Co se nemá implementovat podruhé
 

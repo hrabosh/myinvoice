@@ -1,0 +1,23 @@
+{
+  "specVersion": "1.0",
+  "data": {
+    "externalInvoiceKey": "60000000-0000-4000-8000-000000000001",
+    "invoiceId": "789",
+    "invoiceNumber": null,
+    "status": "draft",
+    "rawStatus": "draft",
+    "currency": "CZK",
+    "totalMinor": 544500,
+    "amountDueMinor": 544500,
+    "issueDate": "2026-08-30",
+    "dueDate": "2026-09-13",
+    "editPath": "/invoices/789/edit",
+    "publicUrl": null,
+    "pdfUrl": null,
+    "sequence": 1
+  },
+  "meta": {
+    "contractVersion": "1.0",
+    "requestId": "10000000-0000-4000-8000-000000000005"
+  }
+}

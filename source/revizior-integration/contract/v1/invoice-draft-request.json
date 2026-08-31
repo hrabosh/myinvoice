@@ -1,0 +1,29 @@
+{
+  "specVersion": "1.0",
+  "externalInvoiceKey": "60000000-0000-4000-8000-000000000001",
+  "clientUuid": "40000000-0000-4000-8000-000000000001",
+  "invoiceType": "invoice",
+  "currency": "CZK",
+  "issueDate": "2026-08-30",
+  "taxDate": "2026-08-30",
+  "dueDate": "2026-09-13",
+  "pricesIncludeVat": false,
+  "language": "cs",
+  "items": [
+    {
+      "externalLineKey": "50000000-0000-4000-8000-000000000001",
+      "priceListCode": "REV_ELEKTRO_ZAKLAD",
+      "description": "Pravidelná revize elektroinstalace",
+      "quantity": "1.000",
+      "unit": "ks",
+      "unitPrice": "4500.00",
+      "vatRate": "21.00",
+      "sourceReferences": [
+        {
+          "type": "revision_report",
+          "uuid": "70000000-0000-4000-8000-000000000001"
+        }
+      ]
+    }
+  ]
+}
