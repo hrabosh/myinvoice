@@ -113,6 +113,89 @@ final class UserSupplierRepository
     }
 
     /**
+     * Členové jediné firmy. Nevrací globální roli ani uživatele mimo supplier.
+     *
+     * @return list<array{user_id:int,email:string,name:string,role:string,is_active:bool}>
+     */
+    public function listForSupplier(int $supplierId): array
+    {
+        if ($supplierId <= 0 || !$this->tableExists()) return [];
+        $stmt = $this->db->pdo()->prepare(
+            'SELECT u.id AS user_id, u.email, u.name, COALESCE(us.role, u.role) AS role, u.is_active
+              FROM user_suppliers us
+               JOIN users u ON u.id = us.user_id
+              WHERE us.supplier_id = ?
+                AND u.role <> \'admin\'
+           ORDER BY u.is_active DESC, u.name, u.id'
+        );
+        $stmt->execute([$supplierId]);
+        return array_map(static fn (array $row): array => [
+            'user_id' => (int) $row['user_id'],
+            'email' => (string) $row['email'],
+            'name' => (string) $row['name'],
+            'role' => (string) $row['role'],
+            'is_active' => (bool) $row['is_active'],
+        ], $stmt->fetchAll(\PDO::FETCH_ASSOC));
+    }
+
+    /**
+     * Změní výhradně tenantovou roli existujícího člena. Lock celé membership
+     * sady brání souběžnému odebrání dvou posledních ownerů.
+     */
+    public function updateRoleForSupplier(int $supplierId, int $userId, string $role): bool
+    {
+        if ($supplierId <= 0 || $userId <= 0 || !$this->tableExists()) return false;
+        $pdo = $this->db->pdo();
+        $ownTransaction = !$pdo->inTransaction();
+        if ($ownTransaction) $pdo->beginTransaction();
+        try {
+            $members = $this->lockMembersForSupplier($supplierId);
+            $target = $this->memberByUserId($members, $userId);
+            if ($target === null) {
+                if ($ownTransaction) $pdo->commit();
+                return false;
+            }
+            $this->guardLastActiveOwner($members, $target, $role);
+            $stmt = $pdo->prepare(
+                'UPDATE user_suppliers SET role = ? WHERE supplier_id = ? AND user_id = ?'
+            );
+            $stmt->execute([$role, $supplierId, $userId]);
+            if ($ownTransaction) $pdo->commit();
+            return true;
+        } catch (\Throwable $e) {
+            if ($ownTransaction && $pdo->inTransaction()) $pdo->rollBack();
+            throw $e;
+        }
+    }
+
+    /** Odebere existující membership; posledního aktivního ownera odebrat nelze. */
+    public function removeForSupplier(int $supplierId, int $userId): bool
+    {
+        if ($supplierId <= 0 || $userId <= 0 || !$this->tableExists()) return false;
+        $pdo = $this->db->pdo();
+        $ownTransaction = !$pdo->inTransaction();
+        if ($ownTransaction) $pdo->beginTransaction();
+        try {
+            $members = $this->lockMembersForSupplier($supplierId);
+            $target = $this->memberByUserId($members, $userId);
+            if ($target === null) {
+                if ($ownTransaction) $pdo->commit();
+                return false;
+            }
+            $this->guardLastActiveOwner($members, $target, null);
+            $stmt = $pdo->prepare(
+                'DELETE FROM user_suppliers WHERE supplier_id = ? AND user_id = ?'
+            );
+            $stmt->execute([$supplierId, $userId]);
+            if ($ownTransaction) $pdo->commit();
+            return true;
+        } catch (\Throwable $e) {
+            if ($ownTransaction && $pdo->inTransaction()) $pdo->rollBack();
+            throw $e;
+        }
+    }
+
+    /**
      * Nahradí kompletní sadu přiřazení uživatele (delete + insert v transakci).
      * Prázdné pole = zrušit omezení (uživatel zase vidí všechny firmy).
      *
@@ -154,5 +237,54 @@ final class UserSupplierRepository
     {
         if ($supplierId <= 0 || !$this->tableExists()) return;
         $this->db->pdo()->prepare('DELETE FROM user_suppliers WHERE supplier_id = ?')->execute([$supplierId]);
+    }
+
+    /** @return list<array{user_id:int,role:?string,is_active:bool}> */
+    private function lockMembersForSupplier(int $supplierId): array
+    {
+        $stmt = $this->db->pdo()->prepare(
+            'SELECT us.user_id, us.role, u.is_active
+               FROM user_suppliers us
+               JOIN users u ON u.id = us.user_id
+              WHERE us.supplier_id = ?
+                AND u.role <> \'admin\'
+              FOR UPDATE'
+        );
+        $stmt->execute([$supplierId]);
+        return array_map(static fn (array $row): array => [
+            'user_id' => (int) $row['user_id'],
+            'role' => $row['role'] !== null ? (string) $row['role'] : null,
+            'is_active' => (bool) $row['is_active'],
+        ], $stmt->fetchAll(\PDO::FETCH_ASSOC));
+    }
+
+    /**
+     * @param list<array{user_id:int,role:?string,is_active:bool}> $members
+     * @return array{user_id:int,role:?string,is_active:bool}|null
+     */
+    private function memberByUserId(array $members, int $userId): ?array
+    {
+        foreach ($members as $member) {
+            if ($member['user_id'] === $userId) return $member;
+        }
+        return null;
+    }
+
+    /**
+     * @param list<array{user_id:int,role:?string,is_active:bool}> $members
+     * @param array{user_id:int,role:?string,is_active:bool} $target
+     */
+    private function guardLastActiveOwner(array $members, array $target, ?string $newRole): void
+    {
+        if (!$target['is_active'] || $target['role'] !== 'supplier_owner' || $newRole === 'supplier_owner') {
+            return;
+        }
+        $activeOwners = count(array_filter(
+            $members,
+            static fn (array $member): bool => $member['is_active'] && $member['role'] === 'supplier_owner',
+        ));
+        if ($activeOwners <= 1) {
+            throw new \DomainException('last_supplier_owner');
+        }
     }
 }

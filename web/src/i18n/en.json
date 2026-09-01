@@ -299,7 +299,7 @@
   "nav": {
     "dashboard": "Dashboard", "invoices": "Issued invoices", "clients": "Clients",
     "projects": "Projects", "stats": "Sales", "purchase_stats": "Costs", "bank": "Bank", "system": "System", "section_taxes": "Taxes",
-    "settings": "Settings", "supplier_current": "Supplier", "suppliers": "Suppliers", "codebooks": "Codebooks", "users": "Users", "emails": "Emails",
+    "settings": "Settings", "supplier_current": "Supplier", "suppliers": "Suppliers", "codebooks": "Codebooks", "users": "Users", "members": "Company members", "emails": "Emails",
     "log": "Activity log", "cron_jobs": "Scheduled jobs", "exports": "Issued exports", "imports": "Imports", "imports_issued": "Imports (issued)", "imports_purchase": "Imports (purchase)", "ai_import": "AI import", "integrations": "External integrations", "crm": "CRM", "reports_dph": "VAT return", "reports_kh": "Control statement", "reports_dph_book": "VAT ledger", "reports_shv": "Recapitulative statement", "reports_oss": "OSS return", "reports_income_tax": "Income tax", "reports_submissions": "Submission archive", "reports_monthly_export": "Bulk export", "tax_optimizer": "Tax optimizer", "email_templates": "Email templates", "email_profiles": "Sending profiles", "sent_emails": "Sent emails", "smtp_logs": "SMTP log analysis", "approvals": "Approvals", "updates": "Updates", "myucto_upgrade": "Upgrade to MyÚčto", "api_tokens": "API tokens", "electronic_signatures": "Electronic signatures", "signing_profiles": "Signing profiles", "bank_accounts": "Bank accounts", "bank_email_notices": "Bank notices", "recurring": "Recurring invoices", "price_list": "Price list", "help": "Help", "logout": "Sign out",
     "section_sales": "Sales", "section_purchase": "Purchases", "section_finance": "Finance", "section_clients": "Clients",
     "section_documents": "Documents", "documents": "Documents", "logbook": "Trip logbook",
@@ -3559,6 +3559,21 @@
       "work_report_access_code": "Verification code for work report preview"
     },
     "self_delete_warning": "Cannot delete your own account."
+  },
+  "supplier_members": {
+    "title": "Company members",
+    "subtitle": "Tenant roles and access for the currently selected company only.",
+    "identity_hint": "This page does not change the global account. New accounts are created by the installation administrator or synchronized by ReviziOR in managed mode.",
+    "empty": "The current company has no explicit members.",
+    "you": "you",
+    "inactive": "inactive account",
+    "role_owner": "company owner",
+    "role_accountant": "accountant",
+    "role_readonly": "read only",
+    "saved": "The member role was saved.",
+    "removed": "The member was removed from the company.",
+    "remove": "Remove",
+    "remove_confirm": "Remove {email} from the current company?"
   },
   "activity_log": {
     "title": "Activity log",

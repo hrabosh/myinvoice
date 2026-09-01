@@ -253,6 +253,7 @@ const navSections = computed<NavSection[]>(() => {
         { to: '/admin/settings',         label: t('nav.settings'),        icon: ICONS.settings },
         { to: '/admin/codebooks',        label: t('nav.codebooks'),       icon: ICONS.codebooks },
         { to: '/admin/users',            label: t('nav.users'),           icon: ICONS.users },
+        { to: '/settings/members',       label: t('nav.members'),         icon: ICONS.users },
         { to: '/admin/emails',           label: t('nav.emails'),          icon: ICONS.email },
         { to: '/admin/activity-log',     label: t('nav.log'),             icon: ICONS.log },
         { to: '/admin/integrations',     label: t('nav.integrations'),    icon: ICONS.api_tokens },
@@ -264,12 +265,18 @@ const navSections = computed<NavSection[]>(() => {
     })
   }
 
-  if (!isAdmin && auth.user?.role === 'accountant' && accountantSigningProfilesEnabled.value) {
+  if (!isAdmin && (auth.hasPermission('supplier_members.manage')
+      || (auth.user?.role === 'accountant' && accountantSigningProfilesEnabled.value))) {
     sections.push({
       title: t('nav.system'),
       accent: 'neutral',
       items: [
-        { to: '/admin/electronic-signatures', label: t('nav.electronic_signatures'), icon: ICONS.approvals },
+        ...(auth.hasPermission('supplier_members.manage')
+          ? [{ to: '/settings/members', label: t('nav.members'), icon: ICONS.users }]
+          : []),
+        ...(auth.user?.role === 'accountant' && accountantSigningProfilesEnabled.value
+          ? [{ to: '/admin/electronic-signatures', label: t('nav.electronic_signatures'), icon: ICONS.approvals }]
+          : []),
       ],
     })
   }

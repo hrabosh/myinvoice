@@ -299,7 +299,7 @@
   "nav": {
     "dashboard": "Přehled", "invoices": "Vydané faktury", "clients": "Klienti",
     "projects": "Zakázky", "stats": "Tržby", "purchase_stats": "Náklady", "bank": "Banka", "system": "Systém", "section_taxes": "Daně",
-    "settings": "Nastavení", "supplier_current": "Dodavatel", "suppliers": "Dodavatelé", "codebooks": "Číselníky", "users": "Uživatelé", "emails": "E-maily",
+    "settings": "Nastavení", "supplier_current": "Dodavatel", "suppliers": "Dodavatelé", "codebooks": "Číselníky", "users": "Uživatelé", "members": "Členové firmy", "emails": "E-maily",
     "log": "Log", "cron_jobs": "Plánované úlohy", "exports": "Export vystavených", "imports": "Importy", "imports_issued": "Import vystavených", "imports_purchase": "Import přijatých", "ai_import": "AI import", "integrations": "Externí integrace", "crm": "CRM", "reports_dph": "DPH přiznání", "reports_kh": "Kontrolní hlášení", "reports_dph_book": "Kniha DPH", "reports_shv": "Souhrnné hlášení", "reports_oss": "OSS přiznání", "reports_income_tax": "Daň z příjmů", "reports_submissions": "Archiv podání", "reports_monthly_export": "Hromadný export", "tax_optimizer": "Daňový optimalizátor", "email_templates": "E-mail šablony", "email_profiles": "Odesílací profily", "sent_emails": "Odeslané e-maily", "smtp_logs": "SMTP log analýza", "approvals": "Schvalování", "updates": "Aktualizace", "myucto_upgrade": "Přechod na MyÚčto", "api_tokens": "API tokeny", "electronic_signatures": "Elektronické podpisy", "signing_profiles": "Podpisové profily", "bank_accounts": "Bankovní účty", "bank_email_notices": "Bankovní avíza", "recurring": "Pravidelné fakturace", "price_list": "Ceník", "help": "Nápověda", "logout": "Odhlásit",
     "section_sales": "Prodej", "section_purchase": "Nákup", "section_finance": "Finance", "section_clients": "Klienti",
     "section_documents": "Dokumenty", "documents": "Dokumenty", "logbook": "Kniha jízd",
@@ -3559,6 +3559,21 @@
       "work_report_access_code": "Ověřovací kód pro náhled výkazu práce"
     },
     "self_delete_warning": "Nelze smazat vlastní účet."
+  },
+  "supplier_members": {
+    "title": "Členové firmy",
+    "subtitle": "Tenantové role a přístup pouze k aktuálně zvolené firmě.",
+    "identity_hint": "Tato stránka nemění globální účet. Nové účty vytváří správce instalace nebo je v managed režimu synchronizuje ReviziOR.",
+    "empty": "Aktuální firma nemá žádné explicitní členy.",
+    "you": "vy",
+    "inactive": "neaktivní účet",
+    "role_owner": "vlastník firmy",
+    "role_accountant": "účetní",
+    "role_readonly": "pouze čtení",
+    "saved": "Role člena byla uložena.",
+    "removed": "Člen byl z firmy odebrán.",
+    "remove": "Odebrat",
+    "remove_confirm": "Odebrat {email} z aktuální firmy?"
   },
   "activity_log": {
     "title": "Activity log",

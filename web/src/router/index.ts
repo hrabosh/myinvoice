@@ -85,6 +85,7 @@ const routes: RouteRecordRaw[] = [
       { path: 'admin/price-list',       name: 'admin-price-list', component: () => import('@/pages/admin/PriceList.vue'), meta: { requiresPermission: 'price_list.manage', requiresSupplier: true } },
       { path: 'admin/price-list/new',   name: 'admin-price-list-new', component: () => import('@/pages/admin/PriceListForm.vue'), meta: { requiresPermission: 'price_list.manage', requiresSupplier: true } },
       { path: 'admin/price-list/:id(\\d+)/edit', name: 'admin-price-list-edit', component: () => import('@/pages/admin/PriceListForm.vue'), meta: { requiresPermission: 'price_list.manage', requiresSupplier: true } },
+      { path: 'settings/members',        name: 'supplier-members', component: () => import('@/pages/SupplierMembers.vue'), meta: { requiresPermission: 'supplier_members.manage', requiresSupplier: true } },
       { path: 'recurring',              name: 'recurring',        component: () => import('@/pages/recurring/RecurringList.vue') },
       { path: 'recurring/new',          name: 'recurring-new',    component: () => import('@/pages/recurring/RecurringForm.vue'), meta: { requiresWrite: true, requiresSupplier: true } },
       { path: 'recurring/:id(\\d+)',    name: 'recurring-detail', component: () => import('@/pages/recurring/RecurringDetail.vue') },

@@ -322,6 +322,11 @@ final class RoleMiddleware implements MiddlewareInterface
         ], true)) {
             return Permission::SupplierSettingsManage;
         }
+        if ($path === '/api/settings/supplier/members'
+            || str_starts_with($path, '/api/settings/supplier/members/')
+        ) {
+            return Permission::SupplierMembersManage;
+        }
         if (str_starts_with($path, '/api/settings/branding-profiles')
             || str_starts_with($path, '/api/settings/email-branding')
             || in_array($path, [

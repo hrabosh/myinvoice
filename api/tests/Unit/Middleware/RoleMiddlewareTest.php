@@ -410,6 +410,8 @@ final class RoleMiddlewareTest extends TestCase
             ['PUT', '/api/settings/supplier/invoice-counter'],
             ['GET', '/api/settings/branding-profiles'],
             ['POST', '/api/settings/email-branding/logo'],
+            ['GET', '/api/settings/supplier/members'],
+            ['PUT', '/api/settings/supplier/members/19'],
         ] as [$method, $path]) {
             self::assertSame(204, $middleware->process(
                 $this->request($method, $path, 'readonly'),
@@ -426,6 +428,8 @@ final class RoleMiddlewareTest extends TestCase
             ['PUT', '/api/settings/supplier/invoice-counter'],
             ['GET', '/api/settings/branding-profiles'],
             ['POST', '/api/settings/email-branding/logo'],
+            ['GET', '/api/settings/supplier/members'],
+            ['PUT', '/api/settings/supplier/members/19'],
         ] as [$method, $path]) {
             self::assertSame(403, $this->middleware()->process(
                 $this->request($method, $path, 'accountant'),

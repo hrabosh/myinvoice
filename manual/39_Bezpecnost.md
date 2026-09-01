@@ -464,6 +464,8 @@ Managed režim odděluje globální roli od role v aktuální firmě. Tenantová
 řadu, ceník a branding své firmy. Není globálním administrátorem a nemůže
 spravovat platformní uživatele, aktualizace ani konfiguraci jiné firmy. Frontend
 čte konkrétní seznam oprávnění ze session payloadu; právo neodvozuje jen z názvu role.
+Správa členů pracuje pouze s membershipem aktuální firmy, chrání posledního
+aktivního vlastníka a po změně odvolá session dotčeného uživatele.
 
 ### Jak je to vynucené
 

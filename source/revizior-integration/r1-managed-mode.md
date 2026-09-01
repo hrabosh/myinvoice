@@ -35,6 +35,10 @@
   její branding, zatímco `accountant` tyto owner-only operace nedostane;
 - Vue navigace a route guard pro ceník používají `price_list.manage` místo odhadu
   z legacy role `admin`.
+- tenant-scoped member API a UI dovolují ownerovi vypsat, přerolovat a odebrat
+  pouze členy aktuální firmy; globální účet ani `/api/admin/users/*` neotevírají;
+- změna membershipu chrání vlastní účet a posledního aktivního ownera, audituje
+  cílového uživatele a odvolá jeho existující session.
 
 ## Konfigurace
 
@@ -54,8 +58,6 @@ Managed konfigurace bez absolutní HTTPS adresy failne při startu aplikace.
 
 ## Otevřené části R1
 
-- tenant-scoped správa členů nad `supplier_members.manage` (stávající
-  `/api/admin/users/*` zůstává správně globální a ownerovi se neotevírá);
 - dokončení oddělení globální platform role od efektivní supplier role ve všech action guardech;
 - session version/revocation;
 - bezpečný platform bootstrap CLI a cross-platform wrapper;
@@ -82,11 +84,11 @@ z backend PHP kontejneru. Prohlížeč používá výchozí lokální port `8082
 
 ## Ověření slice
 
-- focused R1 PHPUnit: 38 testů / 233 assertions;
-- unit + architecture PHPUnit: 1 704 testů / 5 516 assertions, bez failure
+- focused R1 PHPUnit: 41 testů / 219 assertions;
+- unit + architecture PHPUnit: 1 709 testů / 5 547 assertions, bez failure
   (67 DB-dependent skipů, 1 existující deprecation);
 - focused PHPStan level 0: bez chyb;
-- frontend PWA testy: 63/63;
+- frontend PWA testy: 64/64;
 - `pnpm build`: type-check i produkční Vite build zelené;
 - migrace `0151` aplikovaná přes `migrate.php`; opakovaný běh bez pending migrací;
 - manuál: HTML 42 kapitol a PDF export zelené.

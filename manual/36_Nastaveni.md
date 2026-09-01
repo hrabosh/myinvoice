@@ -212,6 +212,19 @@ Omezení hlídá server, ne jen UI:
 - **API token** vázaný na firmu mimo přiřazené se nevytvoří a nefunguje,
 - po odebrání firmy si aplikace sama přepne na první povolenou.
 
+### 36.2.4 Členové aktuální firmy
+
+Vlastník firmy (`supplier_owner`) otevře **Systém → Členové firmy**. Stránka
+zobrazuje pouze explicitní členy aktuálně zvolené firmy a dovolí změnit jejich
+tenantovou roli na vlastník, účetní nebo pouze čtení, případně člena z firmy
+odebrat. Nemění jméno, heslo, aktivitu ani globální roli účtu a nikdy nezobrazuje
+uživatele jiných firem.
+
+Vlastní členství nelze z této stránky změnit a posledního aktivního vlastníka
+nelze snížit ani odebrat. Po změně role nebo odebrání systém odvolá existující
+session dotčeného uživatele. Nový globální účet zakládá správce instalace;
+v managed režimu jej standardně synchronizuje ReviziOR.
+
 ## 36.3 Můj profil
 
 **Pravý horní roh → klik na jméno → Můj profil**. Stejná obrazovka jako

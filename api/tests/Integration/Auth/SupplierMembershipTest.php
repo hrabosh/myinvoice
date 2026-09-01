@@ -328,6 +328,65 @@ final class SupplierMembershipTest extends TestCase
         self::assertSame([], $this->json($res));
     }
 
+    public function testSupplierOwnerManagesOnlyCurrentSupplierMembersAndRevokesSession(): void
+    {
+        $ownerId = $this->mkUser('readonly');
+        $memberId = $this->mkUser('accountant');
+        $foreignId = $this->mkUser('accountant');
+        $this->assign($ownerId, [[$this->supplierA, 'supplier_owner']]);
+        $this->assign($memberId, [[$this->supplierA, 'accountant']]);
+        $this->assign($foreignId, [[$this->supplierB, 'accountant']]);
+        $ownerSession = $this->mkSession($ownerId);
+        $memberSession = $this->mkSession($memberId);
+
+        $res = $this->sessionRequest('GET', '/api/settings/supplier/members', $ownerSession);
+        self::assertSame(200, $res->getStatusCode(), (string) $res->getBody());
+        $ids = array_map(static fn (array $row): int => (int) $row['user_id'], $this->json($res));
+        self::assertContains($ownerId, $ids);
+        self::assertContains($memberId, $ids);
+        self::assertNotContains($foreignId, $ids, 'Owner nesmí vidět člena jiné firmy');
+
+        $res = $this->sessionRequest(
+            'PUT',
+            "/api/settings/supplier/members/$memberId",
+            $ownerSession,
+            ['role' => 'readonly'],
+        );
+        self::assertSame(200, $res->getStatusCode(), (string) $res->getBody());
+        $stmt = $this->db->pdo()->prepare(
+            'SELECT role FROM user_suppliers WHERE supplier_id = ? AND user_id = ?'
+        );
+        $stmt->execute([$this->supplierA, $memberId]);
+        self::assertSame('readonly', $stmt->fetchColumn());
+        $sessionStmt = $this->db->pdo()->prepare('SELECT revoked_at FROM sessions WHERE id = ?');
+        $sessionStmt->execute([$memberSession['token']]);
+        self::assertNotNull($sessionStmt->fetchColumn(), 'Změna role musí odvolat existující session člena');
+
+        $res = $this->sessionRequest(
+            'DELETE',
+            "/api/settings/supplier/members/$foreignId",
+            $ownerSession,
+        );
+        self::assertSame(404, $res->getStatusCode(), 'Cizí membership se nesmí změnit ani přes známé user id');
+
+        $res = $this->sessionRequest(
+            'DELETE',
+            "/api/settings/supplier/members/$memberId",
+            $ownerSession,
+        );
+        self::assertSame(200, $res->getStatusCode(), (string) $res->getBody());
+        $stmt->execute([$this->supplierA, $memberId]);
+        self::assertFalse($stmt->fetchColumn());
+
+        $res = $this->sessionRequest(
+            'DELETE',
+            "/api/settings/supplier/members/$ownerId",
+            $ownerSession,
+        );
+        self::assertSame(409, $res->getStatusCode());
+        self::assertSame('self_membership_change_forbidden', $this->json($res)['error']['code'] ?? null);
+    }
+
     public function testGlobalAdminExemptFromMembership(): void
     {
         // Globální admin s membership řádky {A} NESMÍ být zamčen — vidí i firmu B
