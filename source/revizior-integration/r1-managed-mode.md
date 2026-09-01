@@ -1,7 +1,7 @@
 # R1 managed mode — implementovaný základ
 
-> Stav: první aditivní slice hotový; permission/provisioning část R1 zůstává otevřená
-> Datum: 2026-08-31
+> Stav: deployment a tenant membership slice hotový; permission/bootstrap část R1 zůstává otevřená
+> Datum: 2026-09-01
 
 ## Hotovo
 
@@ -20,6 +20,15 @@
 - managed shell zobrazuje „ReviziOR Fakturace“, bezpečný návrat do ReviziORu a samostatnou
   vstupní stránku namísto lokálního login/setup/reset UI;
 - české a anglické překlady, MIT/GitHub attribution zůstává v patičce.
+- idempotentní migrace `0151` rozšiřuje výhradně `user_suppliers.role` o
+  `supplier_owner`; globální `users.role` se nemění;
+- `supplier_owner` se v existujícím business RBAC chová jako `accountant`, ale
+  nikdy neprojde globálním admin fallbackem `/api/admin/*`;
+- request a `/api/auth/me` drží odděleně `platform_role` a `supplier_role`;
+- managed non-admin bez membershipu failne zavřeně i s PAT vázaným na supplier,
+  zatímco standalone zachovává legacy přístup bez membership řádků;
+- uživatel bez managed membershipu stále načte vlastní session stav a může se
+  odhlásit, ale seznam supplierů je prázdný a supplier-scoped endpointy vracejí 403.
 
 ## Konfigurace
 
@@ -39,14 +48,23 @@ Managed konfigurace bez absolutní HTTPS adresy failne při startu aplikace.
 
 ## Otevřené části R1
 
-- migrace `0151` pro `supplier_owner` a navazující permission policy;
-- oddělení globální platform role od efektivní supplier role ve všech action guardech;
-- managed fail-closed chování uživatele bez membership;
+- centralizovaná permission policy a převod citlivých supplier action guardů
+  (settings, ceník, členové, branding) z legacy role kontrol;
+- dokončení oddělení globální platform role od efektivní supplier role ve všech action guardech;
 - session version/revocation;
 - bezpečný platform bootstrap CLI a cross-platform wrapper;
 - SSO vstupní endpoint (v roadmapě spolu se service auth v R2).
 
 Dokud nejsou tyto body hotové, managed mode je integrační základ, ne produkční cutover gate.
+
+## Kontrola MyÚčto upstreamu
+
+K 2026-09-01 (`radekhulan/myucto` commit `bcbc4ea`) má MyÚčto obecnější dynamické role,
+permission catalog a fail-closed membership model z migrace `1074`. Tento fork je nepřebírá
+hromadně: znamenalo by to velký refaktor sdílených action guardů a konfliktní databázové změny.
+R1 proto zatím přidává lokalizovaný `supplier_owner` overlay nad stávajícími legacy rolemi;
+navazující permission policy musí zachovat kompatibilní permission klíče, aby budoucí merge
+nevyžadoval další paralelní autorizační model.
 
 ## Lokální Docker propojení
 
@@ -58,9 +76,11 @@ z backend PHP kontejneru. Prohlížeč používá výchozí lokální port `8082
 
 ## Ověření slice
 
-- focused PHPUnit: 30 testů / 107 assertions;
-- celý PHPUnit: 2 113 testů / 5 452 assertions, bez failure;
+- focused R1 PHPUnit: 31 testů / 226 assertions;
+- unit + architecture PHPUnit: 1 692 testů / 5 492 assertions, bez failure
+  (67 DB-dependent skipů, 1 existující deprecation);
 - focused PHPStan level 0: bez chyb;
 - frontend PWA testy: 62/62;
 - `pnpm build`: type-check i produkční Vite build zelené;
+- migrace `0151` aplikovaná přes `migrate.php`; opakovaný běh bez pending migrací;
 - manuál: HTML 42 kapitol a PDF export zelené.

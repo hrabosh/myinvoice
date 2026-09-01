@@ -285,7 +285,7 @@ final class SupplierMembershipTest extends TestCase
         // Admin: PUT replace + GET
         $res = $this->sessionRequest('PUT', "/api/admin/users/$accountantId/suppliers", $adminSession, [
             'assignments' => [
-                ['supplier_id' => $this->supplierA, 'role' => 'readonly'],
+                ['supplier_id' => $this->supplierA, 'role' => 'supplier_owner'],
                 ['supplier_id' => $this->supplierB, 'role' => null],
             ],
         ]);
@@ -293,7 +293,7 @@ final class SupplierMembershipTest extends TestCase
         $list = $this->json($res);
         self::assertCount(2, $list);
         self::assertSame($this->supplierA, $list[0]['supplier_id']);
-        self::assertSame('readonly', $list[0]['role']);
+        self::assertSame('supplier_owner', $list[0]['role']);
         self::assertSame($this->supplierB, $list[1]['supplier_id']);
         self::assertNull($list[1]['role']);
         self::assertNotSame('', (string) ($list[0]['name'] ?? ''));

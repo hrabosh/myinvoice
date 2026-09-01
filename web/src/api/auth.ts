@@ -5,6 +5,8 @@ export interface User {
   email: string
   name: string
   role: 'admin' | 'accountant' | 'readonly'
+  platform_role?: 'admin' | 'accountant' | 'readonly'
+  supplier_role?: 'supplier_owner' | 'accountant' | 'readonly' | null
   locale: 'cs' | 'en'
   totp_enabled?: boolean
   must_setup_totp?: boolean

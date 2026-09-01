@@ -20,14 +20,15 @@ use Psr\Http\Message\ServerRequestInterface as Request;
  *   PUT /api/admin/users/{id}/suppliers — replace celé sady
  *       body: {assignments: [{supplier_id, role|null}]}
  *
- * Prázdné assignments = odebrat všechna omezení (uživatel opět vidí všechny
- * firmy — BC režim). role NULL = zdědit globální users.role.
+ * Prázdné assignments = žádné explicitní membershipy. Ve standalone režimu to
+ * zachovává BC přístup ke všem firmám; managed resolver takového non-admina
+ * odmítne. role NULL = zdědit globální users.role.
  */
 final class UserSupplierAdminAction
 {
     // 'admin' ZÁMĚRNĚ chybí — per-supplier admin by eskaloval na globálního admina
     // (endpointy /api/admin/* nejsou supplier-scoped). Globální adminy určuje users.role.
-    private const ROLES = ['accountant', 'readonly'];
+    private const ROLES = ['supplier_owner', 'accountant', 'readonly'];
 
     public function __construct(
         private readonly Connection $db,
@@ -76,7 +77,7 @@ final class UserSupplierAdminAction
             }
             $role = $a['role'] ?? null;
             if ($role !== null && !in_array($role, self::ROLES, true)) {
-                return Json::error($response, 'validation_failed', 'Neplatná role — povolené: accountant, readonly nebo null (zdědit globální).', 400);
+                return Json::error($response, 'validation_failed', 'Neplatná role — povolené: supplier_owner, accountant, readonly nebo null (zdědit globální).', 400);
             }
             $seen[$sid] = true;
             $assignments[] = ['supplier_id' => $sid, 'role' => $role !== null ? (string) $role : null];

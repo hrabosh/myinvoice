@@ -30,7 +30,7 @@ use Slim\Psr7\Factory\ResponseFactory;
 final class RoleMiddleware implements MiddlewareInterface
 {
     /** Cesty, kde RBAC neaplikujeme (public + self-service). */
-    private const PUBLIC_OR_SELF = [
+    public const PUBLIC_OR_SELF = [
         '/api/health',
         '/api/version',
         '/api/openapi.yaml',
@@ -203,14 +203,18 @@ final class RoleMiddleware implements MiddlewareInterface
 
         $user = (array) $request->getAttribute(AuthMiddleware::ATTR_USER, []);
         $role = (string) ($user['role'] ?? '');
+        $platformRole = (string) ($user['platform_role'] ?? $role);
+        $user['platform_role'] = $platformRole;
+        $request = $request->withAttribute(AuthMiddleware::ATTR_USER, $user);
 
         // Per-supplier role override (user_suppliers.role) — efektivní role pro
         // aktuální firmu. RoleMiddleware běží PŘED SupplierScope, proto supplier
         // resolvuje sdílený SupplierAccessResolver (memoizováno, SupplierScope ho
-        // znovu nepočítá). Efektivní roli propíšeme do ATTR_USER, aby ji viděly
-        // i Action-level guardy (SettingsAction/UserAdminAction čtou role z attrs)
-        // a hlavně /api/auth/me — FE si z něj řídí auth.canWrite, takže se počítá
-        // i na self-service cestách (proto před PUBLIC_OR_SELF větví).
+        // znovu nepočítá). Efektivní legacy roli propíšeme do ATTR_USER, aby ji
+        // viděly i Action-level guardy a /api/auth/me — FE si z něj řídí
+        // auth.canWrite. Původní platform role a přesná tenantová role zůstávají
+        // vedle ní jako `platform_role` a `supplier_role`. Počítá se i na
+        // self-service cestách (proto před PUBLIC_OR_SELF větví).
         // denied requesty neřešíme — SupplierScopeMiddleware je stejně ukončí 403.
         //
         // BEZPEČNOST: resolver vrací override=NULL pro globální adminy (ti si roli
@@ -218,16 +222,23 @@ final class RoleMiddleware implements MiddlewareInterface
         // per-supplier přiřazení NIKDY nesmí povýšit uživatele na globálního admina
         // (admin endpointy /api/admin/* nejsou supplier-scoped; jinak by šlo přes
         // override eskalovat na celoinstančního admina). 'admin' je i tak už mimo
-        // enum user_suppliers.role (migrace 0148), tohle je pojistka proti stray řádku.
+        // povolené tenantové role (migrace 0148 + 0151); pojistka proti stray řádku.
         if ($role !== '') {
             $access = $this->supplierAccess->resolve($request);
             if (!$access->denied && $access->roleOverride !== null) {
-                $override = $access->roleOverride === 'admin' ? 'accountant' : $access->roleOverride;
+                $supplierRole = $access->roleOverride;
+                // supplier_owner dostává účetní oprávnění stávajícího jádra,
+                // ale nikdy globální admin fallback pro /api/admin/*. Jeho
+                // rozšířená tenantová oprávnění doplní centralizovaná policy.
+                $override = in_array($supplierRole, ['admin', 'supplier_owner'], true)
+                    ? 'accountant'
+                    : $supplierRole;
+                $user['supplier_role'] = $supplierRole;
                 if ($override !== $role) {
                     $role = $override;
                     $user['role'] = $role;
-                    $request = $request->withAttribute(AuthMiddleware::ATTR_USER, $user);
                 }
+                $request = $request->withAttribute(AuthMiddleware::ATTR_USER, $user);
             }
         }
 

@@ -37,14 +37,18 @@ final class MeAction
         $currentSupplierId = (int) $request->getAttribute(SupplierScopeMiddleware::ATTR_CURRENT_ID, 0);
 
         // Membership filtr (zrcadlí SettingsAction::listSuppliers) — přepínač firem
-        // smí nabídnout jen přiřazené firmy. Globální admin a uživatel bez
-        // membershipu vidí všechny (BC).
-        $allowed = ($user['role'] ?? '') === 'admin'
+        // smí nabídnout jen přiřazené firmy. Globální admin a standalone
+        // uživatel bez membershipu vidí všechny (BC); managed non-admin bez
+        // membershipu nedostane žádný tenant.
+        $platformRole = (string) ($user['platform_role'] ?? $user['role'] ?? '');
+        $allowed = $platformRole === 'admin'
             ? []
             : $this->userSuppliers->allowedSupplierIds((int) ($user['id'] ?? 0));
         $where  = '';
         $params = [];
-        if ($allowed !== []) {
+        if ($this->capabilities->isReviziorManaged() && $platformRole !== 'admin' && $allowed === []) {
+            $where = ' WHERE 1 = 0';
+        } elseif ($allowed !== []) {
             $where  = ' WHERE id IN (' . implode(',', array_fill(0, count($allowed), '?')) . ')';
             $params = $allowed;
         }
@@ -117,6 +121,8 @@ final class MeAction
                 'email'           => $user['email'] ?? '',
                 'name'            => $user['name'] ?? '',
                 'role'            => $user['role'] ?? 'readonly',
+                'platform_role'   => $platformRole,
+                'supplier_role'   => $user['supplier_role'] ?? null,
                 'locale'          => $user['locale'] ?? 'cs',
                 'totp_enabled'    => $totpEnabled,
                 'must_setup_totp' => $mustSetupTotp,

@@ -137,7 +137,7 @@ export interface UserSupplierAssignment {
   supplier_id: number
   name: string
   ic: string | null
-  role: 'accountant' | 'readonly' | null
+  role: 'supplier_owner' | 'accountant' | 'readonly' | null
 }
 
 export const adminApi = {
@@ -163,10 +163,10 @@ export const adminApi = {
   updateUser: (id: number, payload: Partial<{ name: string; role: AdminUser['role']; locale: 'cs' | 'en'; is_active: boolean; password: string }>) =>
     api.put<AdminUser>(`/admin/users/${id}`, payload).then(r => r.data),
   deleteUser: (id: number) => api.delete(`/admin/users/${id}`),
-  // Přiřazení firem uživateli (prázdné = bez omezení, vidí všechny firmy)
+  // Přiřazení firem uživateli (prázdné = standalone BC; managed bez tenantového přístupu)
   listUserSuppliers: (id: number) =>
     api.get<UserSupplierAssignment[]>(`/admin/users/${id}/suppliers`).then(r => r.data),
-  setUserSuppliers: (id: number, assignments: Array<{ supplier_id: number; role: 'accountant' | 'readonly' | null }>) =>
+  setUserSuppliers: (id: number, assignments: Array<{ supplier_id: number; role: 'supplier_owner' | 'accountant' | 'readonly' | null }>) =>
     api.put<UserSupplierAssignment[]>(`/admin/users/${id}/suppliers`, { assignments }).then(r => r.data),
 
   // Approvals inbox

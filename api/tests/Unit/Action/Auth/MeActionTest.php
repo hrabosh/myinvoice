@@ -103,5 +103,66 @@ final class MeActionTest extends TestCase
         self::assertSame('2026-07-24T12:03:00.000000Z', $body['idle_expires_at']);
         self::assertSame(str_repeat('b', 64), $body['csrf_token']);
         self::assertSame('standalone', $body['deploymentMode']);
+        self::assertSame('admin', $body['user']['platform_role']);
+        self::assertNull($body['user']['supplier_role']);
+    }
+
+    public function testManagedUserWithoutMembershipReceivesNoSuppliers(): void
+    {
+        $supplierStatement = $this->createMock(\PDOStatement::class);
+        $supplierStatement->expects(self::once())->method('execute')->with([])->willReturn(true);
+        $supplierStatement->expects(self::once())->method('fetchAll')->with(\PDO::FETCH_ASSOC)->willReturn([]);
+        $pdo = $this->createMock(\PDO::class);
+        $pdo->expects(self::once())
+            ->method('prepare')
+            ->with(self::stringContains('WHERE 1 = 0'))
+            ->willReturn($supplierStatement);
+        $db = $this->createMock(Connection::class);
+        $db->method('hasColumn')->willReturn(false);
+        $db->method('pdo')->willReturn($pdo);
+
+        $credentials = $this->createMock(PasskeyCredentialRepository::class);
+        $credentials->expects(self::once())->method('countActiveForUser')->with(18)->willReturn(0);
+        $memberships = $this->createMock(\MyInvoice\Repository\UserSupplierRepository::class);
+        $memberships->expects(self::once())->method('allowedSupplierIds')->with(18)->willReturn([]);
+        $clock = $this->createStub(ClockInterface::class);
+        $clock->method('now')->willReturn(new \DateTimeImmutable('2026-09-01 12:00:00 UTC'));
+        $config = new Config([
+            'deployment' => [
+                'mode' => 'revizior_managed',
+                'public_name' => 'ReviziOR Fakturace',
+                'revizior' => ['app_url' => 'https://app.revizior.cz/fakturace'],
+            ],
+        ]);
+
+        $action = new MeAction(
+            $db,
+            $config,
+            $credentials,
+            $memberships,
+            new MfaPolicyService($config),
+            new SessionLockPolicy($config),
+            $clock,
+            new DeploymentCapabilities($config),
+        );
+        $request = (new ServerRequestFactory())
+            ->createServerRequest('GET', '/api/auth/me')
+            ->withAttribute(AuthMiddleware::ATTR_USER, [
+                'id' => 18,
+                'email' => 'managed-no-membership@example.invalid',
+                'name' => 'Managed No Membership',
+                'role' => 'readonly',
+                'platform_role' => 'readonly',
+            ])
+            ->withAttribute(AuthMiddleware::ATTR_SESSION, ['assurance_level' => 'strong'])
+            ->withAttribute(SupplierScopeMiddleware::ATTR_CURRENT_ID, 0);
+
+        $response = $action($request, (new ResponseFactory())->createResponse());
+        $body = json_decode((string) $response->getBody(), true, flags: JSON_THROW_ON_ERROR);
+
+        self::assertSame([], $body['suppliers']);
+        self::assertSame(0, $body['current_supplier_id']);
+        self::assertSame('readonly', $body['user']['platform_role']);
+        self::assertNull($body['user']['supplier_role']);
     }
 }

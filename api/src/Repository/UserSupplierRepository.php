@@ -9,11 +9,12 @@ use MyInvoice\Infrastructure\Database\Connection;
 /**
  * Membership uživatel ↔ supplier (tabulka user_suppliers, migrace 0148).
  *
- * Prázdné přiřazení = BEZ omezení (zpětná kompatibilita — stávající instalace
- * po upgradu fungují dál, dokud správce vědomě někomu přístup neomezí).
+ * Prázdné přiřazení zachovává ve standalone režimu zpětně kompatibilní přístup
+ * bez omezení. Managed resolver je interpretuje fail-closed.
  * `role` je volitelný per-supplier override; NULL dědí globální users.role.
  *
- * Schéma je záměrně shodné s MyÚčto.cz (tam migrace 1000_user_suppliers.sql).
+ * Základ schématu vychází z MyÚčto migrace 1000; managed overlay v migraci
+ * 0151 lokálně přidává tenantovou roli supplier_owner.
  */
 final class UserSupplierRepository
 {

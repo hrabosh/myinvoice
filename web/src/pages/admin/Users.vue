@@ -45,10 +45,12 @@ onMounted(() => {
 })
 
 // ── Přiřazení firem (user_suppliers) — checkbox list v edit modalu ──────────
-// Prázdný výběr = bez omezení (BC), role null = zdědit globální users.role.
+// Prázdný výběr = standalone BC / managed bez tenantového přístupu.
+// Role null = zdědit globální users.role.
 const allSuppliers = ref<Array<{ id: number; name: string }>>([])
 const assignRows = ref<Array<{ id: number; name: string }>>([])
-const assign = ref<Record<number, { checked: boolean; role: 'accountant' | 'readonly' | null }>>({})
+type SupplierRole = 'supplier_owner' | 'accountant' | 'readonly' | null
+const assign = ref<Record<number, { checked: boolean; role: SupplierRole }>>({})
 const assignLoaded = ref(false)
 let assignOriginal = ''
 
@@ -59,7 +61,7 @@ async function loadSuppliers() {
   } catch { allSuppliers.value = [] }
 }
 
-function assignmentsPayload(): Array<{ supplier_id: number; role: 'accountant' | 'readonly' | null }> {
+function assignmentsPayload(): Array<{ supplier_id: number; role: SupplierRole }> {
   return assignRows.value
     .filter(r => assign.value[r.id]?.checked)
     .map(r => ({ supplier_id: r.id, role: assign.value[r.id].role }))
@@ -75,7 +77,7 @@ async function loadAssignments(userId: number) {
     // Řádky = všechny firmy viditelné adminem + případná přiřazení mimo ně
     // (jinak by se při PUT replace ztratila).
     const rows = [...allSuppliers.value]
-    const rec: Record<number, { checked: boolean; role: 'accountant' | 'readonly' | null }> = {}
+    const rec: Record<number, { checked: boolean; role: SupplierRole }> = {}
     for (const s of rows) rec[s.id] = { checked: false, role: null }
     for (const a of list) {
       if (!(a.supplier_id in rec)) rows.push({ id: a.supplier_id, name: a.name })
@@ -319,6 +321,7 @@ function roleBadge(role: string): string {
                   :title="t('users.supplier_role_title')"
                   class="h-8 px-2 border border-neutral-300 rounded-md text-xs bg-surface shrink-0">
                   <option :value="null">{{ t('users.supplier_role_inherit') }}</option>
+                  <option value="supplier_owner">{{ t('users.supplier_role_owner') }}</option>
                   <option value="accountant">accountant</option>
                   <option value="readonly">readonly</option>
                 </select>

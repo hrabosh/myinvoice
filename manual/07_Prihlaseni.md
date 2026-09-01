@@ -3,6 +3,9 @@
 > 🛈 V řízené instalaci **ReviziOR Fakturace** jsou místní přihlášení i obnova
 > hesla vypnuté. Do fakturace vstupuj z ReviziORu; návrat vede přes
 > nakonfigurované tlačítko **Zpět do ReviziORu**, ne přes adresu z URL parametru.
+> Pokud už nemáš aktivní přiřazení k žádné firmě, fakturační data se nezobrazí
+> a API přístup k firmám je odmítnut. Vlastní stav účtu a odhlášení zůstávají
+> dostupné, abys mohl bezpečně ukončit relaci a vrátit se do ReviziORu.
 
 ## 7.1 Přihlášení
 

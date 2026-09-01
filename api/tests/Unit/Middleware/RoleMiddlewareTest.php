@@ -374,12 +374,56 @@ final class RoleMiddlewareTest extends TestCase
         }
     }
 
+    public function testSupplierOwnerGetsBusinessWritesWithoutPlatformAdminFallback(): void
+    {
+        $middleware = $this->middlewareWithOverride('supplier_owner');
+
+        self::assertSame(204, $middleware->process(
+            $this->request('POST', '/api/clients', 'readonly'),
+            $this->okHandler(),
+        )->getStatusCode());
+        self::assertSame(403, $middleware->process(
+            $this->request('GET', '/api/admin/users', 'readonly'),
+            $this->okHandler(),
+        )->getStatusCode());
+    }
+
+    public function testSupplierOwnerKeepsPlatformAndSupplierRolesSeparateInRequest(): void
+    {
+        $response = $this->middlewareWithOverride('supplier_owner')->process(
+            $this->request('GET', '/api/auth/me', 'readonly'),
+            new class implements RequestHandlerInterface {
+                public function handle(ServerRequestInterface $request): ResponseInterface
+                {
+                    $user = (array) $request->getAttribute(AuthMiddleware::ATTR_USER, []);
+                    return (new ResponseFactory())->createResponse(204)
+                        ->withHeader('X-Test-Role', (string) ($user['role'] ?? ''))
+                        ->withHeader('X-Test-Platform-Role', (string) ($user['platform_role'] ?? ''))
+                        ->withHeader('X-Test-Supplier-Role', (string) ($user['supplier_role'] ?? ''));
+                }
+            },
+        );
+
+        self::assertSame('accountant', $response->getHeaderLine('X-Test-Role'));
+        self::assertSame('readonly', $response->getHeaderLine('X-Test-Platform-Role'));
+        self::assertSame('supplier_owner', $response->getHeaderLine('X-Test-Supplier-Role'));
+    }
+
     private function middleware(): RoleMiddleware
     {
         // Bez membershipu = žádný per-supplier override (BC větev resolveru).
         $resolver = $this->createStub(\MyInvoice\Service\Tenant\SupplierAccessResolver::class);
         $resolver->method('resolve')->willReturn(
             new \MyInvoice\Service\Tenant\SupplierAccess(0, false, null),
+        );
+        return new RoleMiddleware(new ResponseFactory(), $resolver);
+    }
+
+    private function middlewareWithOverride(string $role): RoleMiddleware
+    {
+        $resolver = $this->createStub(\MyInvoice\Service\Tenant\SupplierAccessResolver::class);
+        $resolver->method('resolve')->willReturn(
+            new \MyInvoice\Service\Tenant\SupplierAccess(7, false, $role),
         );
         return new RoleMiddleware(new ResponseFactory(), $resolver);
     }

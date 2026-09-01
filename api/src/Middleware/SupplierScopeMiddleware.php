@@ -52,6 +52,13 @@ final class SupplierScopeMiddleware implements MiddlewareInterface
         $access = $this->resolver->resolve($request);
 
         if ($access->denied) {
+            // Uživatel bez managed membershipu musí stále načíst vlastní stav a
+            // umět se bezpečně odhlásit. Supplier-scoped data však nedostane.
+            if (in_array($path, RoleMiddleware::PUBLIC_OR_SELF, true)
+                || str_starts_with($path, '/api/public/')
+            ) {
+                return $handler->handle($request->withAttribute(self::ATTR_CURRENT_ID, 0));
+            }
             $response = $this->responseFactory->createResponse(403);
             return Json::error($response, 'forbidden_supplier', 'K této firmě nemáš oprávnění.', 403);
         }
