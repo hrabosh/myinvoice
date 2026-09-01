@@ -33,9 +33,12 @@ Fakturace bude dostupná v prohlížeči na `http://localhost:8082`. Backend kon
 ji uvidí pod stabilní adresou `http://revizior-invoice.local`. Jinou síť nebo port lze
 zadat přes `REVIZIOR_DOCKER_NETWORK` a `APP_PORT`.
 
-Dokud nejsou implementované provider SSO a service endpointy, ponech lokálně
-`MYINVOICE_DEPLOYMENT_MODE=standalone`; tím zůstane dostupný setup a místní login.
-Samotné propojení sítě integrační endpointy nezapíná.
+Síťové propojení samo integrační endpointy nezapíná. Pro vývoj běžného standalone
+MyInvoice ponech `MYINVOICE_DEPLOYMENT_MODE=standalone`. Pro integrační vývoj nastav
+`MYINVOICE_DEPLOYMENT_MODE=revizior_managed` a nakonfiguruj issuer, audience, `kid` a
+veřejný service klíč podle `source/revizior-integration/r2-service-foundation.md`.
+Service auth, capability probe a provisioning organizace jsou dostupné; SSO a fakturační
+endpointy zůstávají vypnuté, dokud je capabilities neinzerují.
 
 ## 3.1 Varianta A — pre-built image z GHCR (rychlejší, bez local buildu)
 

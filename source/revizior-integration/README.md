@@ -1,6 +1,6 @@
 # ReviziOR managed integrace
 
-> **Stav:** 🟡 R0–R1 a R2 service-auth foundation implementovány
+> **Stav:** 🟡 R0–R1, R2 service-auth foundation a organization provisioning implementovány
 > **Rozhodnutí:** 2026-08-30  
 > **Provider repozitář:** `hrabosh/myinvoice`  
 > **Consumer repozitář:** `hrabosh/backend`  
@@ -69,6 +69,7 @@ pouze UX pravidlo, ale bezpečnostní hranice se samostatnými integračními a 
 | [`r0-baseline.md`](r0-baseline.md) | Přesné upstream/fork commity, ověřovací příkazy, characterization mapa a další číslo migrace |
 | [`r1-managed-mode.md`](r1-managed-mode.md) | Implementovaný deployment/capability slice R1, konfigurace, ověření a zbývající permission práce |
 | [`r2-service-foundation.md`](r2-service-foundation.md) | Implementovaný service assertion, replay guard, capabilities probe, konfigurace a další R2 slice |
+| [`r2-organization-provisioning.md`](r2-organization-provisioning.md) | Atomický a idempotentní provisioning organizace, suppliera a prvního ownera |
 | [`licensing-decision.md`](licensing-decision.md) | MIT provenance, third-party gate a bezpečnostní volba JOSE/JWT knihovny |
 | [`contract/v1/`](contract/v1/) | Kanonické cross-repo JSON fixtures a jejich deterministické SHA-256 hashe |
 

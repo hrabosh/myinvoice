@@ -3,7 +3,7 @@
   "info": {
     "title": "MyInvoice ReviziOR Integration API",
     "version": "1.0",
-    "description": "Versioned server-to-server and browser SSO contract. The capabilities route and fail-closed service authentication are implemented; other routes remain contractual until their capability is enabled.",
+    "description": "Versioned server-to-server and browser SSO contract. Service authentication, capabilities and atomic organization provisioning are implemented; other routes remain contractual until their capability is enabled.",
     "license": {"name": "MIT", "identifier": "MIT"}
   },
   "servers": [
@@ -17,7 +17,7 @@
       "get": {
         "operationId": "reviziorCapabilities",
         "summary": "Read provider capabilities",
-        "description": "Requires platform subject and capabilities:read. During consumer migration, organization:provision is accepted only for this read-only probe.",
+        "description": "Requires platform subject and the dedicated capabilities:read scope.",
         "parameters": [
           {"$ref": "#/components/parameters/RequestId"}
         ],
@@ -46,7 +46,8 @@
           "400": {"$ref": "#/components/responses/ValidationError"},
           "401": {"$ref": "#/components/responses/ServiceAuthError"},
           "403": {"$ref": "#/components/responses/ServiceScopeError"},
-          "409": {"$ref": "#/components/responses/ConflictError"}
+          "409": {"$ref": "#/components/responses/ConflictError"},
+          "503": {"description": "Provider cannot complete the transaction safely", "content": {"application/json": {"schema": {"$ref": "#/components/schemas/ErrorResponse"}}}}
         }
       }
     },
@@ -288,9 +289,9 @@
         "additionalProperties": false,
         "required": ["street", "city", "postalCode", "countryCode"],
         "properties": {
-          "street": {"type": "string", "maxLength": 255},
+          "street": {"type": "string", "maxLength": 190},
           "city": {"type": "string", "maxLength": 120},
-          "postalCode": {"type": "string", "maxLength": 20},
+          "postalCode": {"type": "string", "maxLength": 10},
           "countryCode": {"type": "string", "pattern": "^[A-Z]{2}$"}
         }
       },
@@ -299,9 +300,9 @@
         "additionalProperties": false,
         "required": ["name", "registrationNumber", "vatNumber", "vatStatus", "address", "language", "active", "sourceUpdatedAt"],
         "properties": {
-          "name": {"type": "string", "minLength": 1, "maxLength": 255},
-          "registrationNumber": {"type": ["string", "null"], "maxLength": 32},
-          "vatNumber": {"type": ["string", "null"], "maxLength": 32},
+          "name": {"type": "string", "minLength": 1, "maxLength": 190},
+          "registrationNumber": {"type": ["string", "null"], "maxLength": 20},
+          "vatNumber": {"type": ["string", "null"], "maxLength": 20},
           "vatStatus": {"type": ["string", "null"], "enum": ["payer", "non_payer", "identified_person", null]},
           "address": {"$ref": "#/components/schemas/Address"},
           "language": {"type": "string", "enum": ["cs", "en"]},
@@ -316,10 +317,10 @@
         "required": ["userUuid", "email", "name", "role", "active"],
         "properties": {
           "userUuid": {"$ref": "#/components/schemas/Uuid"},
-          "email": {"type": "string", "format": "email", "maxLength": 255},
-          "name": {"type": "string", "minLength": 1, "maxLength": 255},
+          "email": {"type": "string", "format": "email", "maxLength": 190},
+          "name": {"type": "string", "minLength": 1, "maxLength": 120},
           "role": {"type": "string", "const": "supplier_owner"},
-          "active": {"type": "boolean"}
+          "active": {"type": "boolean", "const": true}
         }
       },
       "ProvisionRequest": {
@@ -328,7 +329,7 @@
         "required": ["specVersion", "organization", "owner"],
         "properties": {
           "specVersion": {"$ref": "#/components/schemas/ContractVersion"},
-          "organization": {"$ref": "#/components/schemas/Organization"},
+          "organization": {"allOf": [{"$ref": "#/components/schemas/Organization"}, {"type": "object", "properties": {"active": {"const": true}}}]},
           "owner": {"$ref": "#/components/schemas/Owner"}
         }
       },

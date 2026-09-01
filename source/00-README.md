@@ -57,7 +57,7 @@ Multi-supplier fakturační systém (jedna instalace = N dodavatelů / IČO s iz
 
 | Plán | Obsah | Stav |
 |---|---|---|
-| [`revizior-integration/`](revizior-integration/) | **Kanonické zadání managed nasazení na `fakturace.revizior.cz`**: tenantové role, service API, idempotentní drafty, jednorázové SSO, přílohy, event outbox, bezpečnost, provoz a cross-repo roadmapa s `hrabosh/backend`. | 🟡 implementation-ready |
+| [`revizior-integration/`](revizior-integration/) | **Kanonické zadání managed nasazení na `fakturace.revizior.cz`**: tenantové role, service API, idempotentní drafty, jednorázové SSO, přílohy, event outbox, bezpečnost, provoz a cross-repo roadmapa s `hrabosh/backend`. R0–R1, service auth a organization provisioning jsou implementované. | 🟡 probíhá R2 |
 
 Managed ReviziOR režim je aditivní overlay. Nemění fakturační zdroj pravdy ani základní
 standalone rozhodnutí. Rozšiřuje per-supplier oprávnění o `supplier_owner`, která není globální

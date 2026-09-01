@@ -1,6 +1,6 @@
 # R2 service foundation — implementovaný bezpečnostní základ
 
-> Stav: service assertion, replay store a fail-closed capabilities probe hotové; provisioning zůstává vypnutý
+> Stav: service assertion, replay store a fail-closed capabilities probe hotové; organization provisioning navazuje samostatným dokončeným slice
 > Datum: 2026-09-01
 
 ## Hotovo
@@ -15,8 +15,8 @@
   namespace neotevře;
 - stabilní v1 success/error obálka bez interních exception message a bez logování tokenu;
 - chráněný `GET /api/integrations/revizior/v1/capabilities` dostupný pouze v managed režimu;
-- capabilities hlásí všechny navazující integrační funkce `false`, dokud nejsou skutečně
-  hotové end-to-end;
+- capabilities hlásí pouze skutečně dokončené integrační funkce; po navazujícím slice je
+  `organizationProvisioning=true`, ostatní rozpracované funkce zůstávají `false`;
 - idempotentní migrace `0152` zakládá organization/user links, idempotency keys a security nonces;
 - OpenAPI popis oddělené service autentizace a capability response.
 
@@ -35,23 +35,22 @@ Provider drží pouze veřejný PEM. Privátní service klíč zůstává v Revi
 Soubor klíče se necommituje a musí být připojený jako secret nebo uložený v perzistentním
 data volume.
 
-## Kompatibilita capability probe
+## Capability probe scope
 
-Kanonický scope je `capabilities:read`. Současný consumer posílá při prvním probe
-platformní `organization:provision` assertion; provider jej dočasně přijímá pouze pro tento
-read-only endpoint. Consumer má přejít na samostatný scope a kompatibilní výjimka se pak odstraní.
+Capability probe přijímá pouze kanonický scope `capabilities:read`. Consumer přechod na tento
+nejmenší scope dokončil a dřívější kompatibilní výjimka pro `organization:provision` byla
+odstraněna po úspěšném cross-repo handshake testu.
 
 ## Další slice R2
 
-1. atomický organization provisioning včetně owner user linku, membershipu, auditu a idempotence;
-2. organization update a user upsert/revoke se zvýšením `session_version`;
-3. migration integrační testy pro clean DB, upgrade a souběh;
-4. SSO ticket s odděleným audience a signing key;
-5. capability `organizationProvisioning`/`userProvisioning`/`sso` zapnout jednotlivě až po
+1. organization update a user upsert/revoke se zvýšením `session_version`;
+2. migration integrační testy pro clean DB, upgrade a souběh;
+3. SSO ticket s odděleným audience a signing key;
+4. capability `userProvisioning`/`sso` zapnout jednotlivě až po
    zeleném cross-repo smoke testu.
 
-Do dokončení prvních dvou bodů je service kanál diagnostický a fail-closed; backend nesmí
-provisioning ani fakturaci považovat za dostupnou.
+Organization provisioning je dostupný. Backend stále nesmí považovat obecnou synchronizaci
+uživatelů, SSO ani fakturaci za dostupnou, dokud je provider neinzeruje v capabilities.
 
 ## Ověření slice
 

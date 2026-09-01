@@ -96,12 +96,19 @@ final class ReviziorServiceAuthMiddleware implements MiddlewareInterface
     {
         $path = $request->getUri()->getPath();
         if ($request->getMethod() === 'GET' && $path === self::PATH_PREFIX . '/capabilities') {
-            // Consumer dočasně používá provisioning assertion i pro první
-            // capability probe. Nový scope je už autoritativní, silnější
-            // provisioning scope zůstává kompatibilní pouze pro tento read.
-            if (!$identity->hasScope('capabilities:read')
-                && !$identity->hasScope('organization:provision')
-            ) {
+            if (!$identity->hasScope('capabilities:read')) {
+                throw ReviziorServiceAuthException::forbidden('service_scope_insufficient');
+            }
+            if ($identity->subject !== 'platform') {
+                throw ReviziorServiceAuthException::forbidden('organization_subject_mismatch');
+            }
+            return;
+        }
+
+        if ($request->getMethod() === 'POST'
+            && preg_match('#^' . preg_quote(self::PATH_PREFIX, '#') . '/organizations/[^/]+/provision$#D', $path) === 1
+        ) {
+            if (!$identity->hasScope('organization:provision')) {
                 throw ReviziorServiceAuthException::forbidden('service_scope_insufficient');
             }
             if ($identity->subject !== 'platform') {
@@ -115,8 +122,10 @@ final class ReviziorServiceAuthMiddleware implements MiddlewareInterface
 
     private function endpointFamily(string $path): string
     {
-        return $path === self::PATH_PREFIX . '/capabilities'
-            ? '/capabilities'
-            : '/unsupported';
+        if ($path === self::PATH_PREFIX . '/capabilities') return '/capabilities';
+        if (preg_match('#^' . preg_quote(self::PATH_PREFIX, '#') . '/organizations/[^/]+/provision$#D', $path) === 1) {
+            return '/organizations/{organizationUuid}/provision';
+        }
+        return '/unsupported';
     }
 }

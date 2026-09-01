@@ -95,6 +95,61 @@ final class ReviziorServiceAuthMiddlewareTest extends TestCase
         self::assertSame('service_scope_insufficient', $this->json($response)['error']['code']);
     }
 
+    public function testProvisioningScopeDoesNotOpenCapabilitiesRead(): void
+    {
+        $this->verifier->expects(self::once())
+            ->method('verify')
+            ->willReturn($this->identity(['organization:provision']));
+        $this->replay->expects(self::never())->method('consume');
+
+        $response = $this->middleware()->process(
+            $this->request()->withHeader('Authorization', 'Bearer signed-token'),
+            $this->failingHandler(),
+        );
+
+        self::assertSame(403, $response->getStatusCode());
+        self::assertSame('service_scope_insufficient', $this->json($response)['error']['code']);
+    }
+
+    public function testOrganizationProvisionRequiresPlatformSubjectAndDedicatedScope(): void
+    {
+        $identity = $this->identity(['organization:provision']);
+        $this->verifier->expects(self::once())->method('verify')->willReturn($identity);
+        $this->replay->expects(self::once())->method('consume')->with($identity);
+
+        $response = $this->middleware()->process(
+            $this->provisionRequest()->withHeader('Authorization', 'Bearer signed-token'),
+            new class implements RequestHandlerInterface {
+                public function handle(ServerRequestInterface $request): ResponseInterface
+                {
+                    return (new ResponseFactory())->createResponse(204);
+                }
+            },
+        );
+        self::assertSame(204, $response->getStatusCode());
+    }
+
+    public function testTenantSubjectCannotProvisionOrganization(): void
+    {
+        $identity = new ReviziorServiceIdentity(
+            'https://app.revizior.cz',
+            '30000000-0000-4000-8000-000000000001',
+            '20000000-0000-4000-8000-000000000001',
+            time() + 60,
+            ['organization:provision'],
+            self::REQUEST_ID,
+        );
+        $this->verifier->expects(self::once())->method('verify')->willReturn($identity);
+        $this->replay->expects(self::never())->method('consume');
+
+        $response = $this->middleware()->process(
+            $this->provisionRequest()->withHeader('Authorization', 'Bearer signed-token'),
+            $this->failingHandler(),
+        );
+        self::assertSame(403, $response->getStatusCode());
+        self::assertSame('organization_subject_mismatch', $this->json($response)['error']['code']);
+    }
+
     public function testStandaloneDeploymentHidesIntegrationNamespace(): void
     {
         $this->verifier->expects(self::never())->method('verify');
@@ -132,6 +187,16 @@ final class ReviziorServiceAuthMiddlewareTest extends TestCase
     {
         return (new ServerRequestFactory())
             ->createServerRequest('GET', '/api/integrations/revizior/v1/capabilities')
+            ->withHeader(ReviziorServiceAuthMiddleware::REQUEST_ID_HEADER, self::REQUEST_ID);
+    }
+
+    private function provisionRequest(): ServerRequestInterface
+    {
+        return (new ServerRequestFactory())
+            ->createServerRequest(
+                'POST',
+                '/api/integrations/revizior/v1/organizations/30000000-0000-4000-8000-000000000001/provision',
+            )
             ->withHeader(ReviziorServiceAuthMiddleware::REQUEST_ID_HEADER, self::REQUEST_ID);
     }
 

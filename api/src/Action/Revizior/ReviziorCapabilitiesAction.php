@@ -19,7 +19,7 @@ final class ReviziorCapabilitiesAction
             // Capability znamená hotový end-to-end endpoint, ne schopnost
             // původní MyInvoice domény. R2 je bude zapínat po jednotlivých slice.
             'features' => [
-                'organizationProvisioning' => false,
+                'organizationProvisioning' => true,
                 'userProvisioning' => false,
                 'clientUpsert' => false,
                 'priceResolution' => false,
