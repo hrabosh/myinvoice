@@ -1,6 +1,6 @@
 # R1 managed mode — implementovaný základ
 
-> Stav: deployment a tenant membership slice hotový; permission/bootstrap část R1 zůstává otevřená
+> Stav: deployment, tenant membership a základ permission policy hotový; bootstrap/session část R1 zůstává otevřená
 > Datum: 2026-09-01
 
 ## Hotovo
@@ -29,6 +29,12 @@
   zatímco standalone zachovává legacy přístup bez membership řádků;
 - uživatel bez managed membershipu stále načte vlastní session stav a může se
   odhlásit, ale seznam supplierů je prázdný a supplier-scoped endpointy vracejí 403.
+- centralizovaná permission matice používá stabilní klíče z integrační specifikace
+  a `/api/auth/me` je vrací frontendu;
+- `supplier_owner` může spravovat ceník, údaje a číselnou řadu aktuální firmy a
+  její branding, zatímco `accountant` tyto owner-only operace nedostane;
+- Vue navigace a route guard pro ceník používají `price_list.manage` místo odhadu
+  z legacy role `admin`.
 
 ## Konfigurace
 
@@ -48,8 +54,8 @@ Managed konfigurace bez absolutní HTTPS adresy failne při startu aplikace.
 
 ## Otevřené části R1
 
-- centralizovaná permission policy a převod citlivých supplier action guardů
-  (settings, ceník, členové, branding) z legacy role kontrol;
+- tenant-scoped správa členů nad `supplier_members.manage` (stávající
+  `/api/admin/users/*` zůstává správně globální a ownerovi se neotevírá);
 - dokončení oddělení globální platform role od efektivní supplier role ve všech action guardech;
 - session version/revocation;
 - bezpečný platform bootstrap CLI a cross-platform wrapper;
@@ -76,11 +82,11 @@ z backend PHP kontejneru. Prohlížeč používá výchozí lokální port `8082
 
 ## Ověření slice
 
-- focused R1 PHPUnit: 31 testů / 226 assertions;
-- unit + architecture PHPUnit: 1 692 testů / 5 492 assertions, bez failure
+- focused R1 PHPUnit: 38 testů / 233 assertions;
+- unit + architecture PHPUnit: 1 704 testů / 5 516 assertions, bez failure
   (67 DB-dependent skipů, 1 existující deprecation);
 - focused PHPStan level 0: bez chyb;
-- frontend PWA testy: 62/62;
+- frontend PWA testy: 63/63;
 - `pnpm build`: type-check i produkční Vite build zelené;
 - migrace `0151` aplikovaná přes `migrate.php`; opakovaný běh bez pending migrací;
 - manuál: HTML 42 kapitol a PDF export zelené.

@@ -184,7 +184,7 @@ const navSections = computed<NavSection[]>(() => {
       items: [
         { to: '/invoices',         label: t('nav.invoices'),   icon: ICONS.invoices,  newTo: '/invoices/new' },
         { to: '/recurring',        label: t('nav.recurring'),  icon: ICONS.recurring, newTo: '/recurring/new' },
-        ...(isAdmin ? [{ to: '/admin/price-list', label: t('nav.price_list'), icon: ICONS.price_list }] : []),
+        ...(auth.hasPermission('price_list.manage') ? [{ to: '/admin/price-list', label: t('nav.price_list'), icon: ICONS.price_list }] : []),
         { to: '/clients',          label: t('nav.clients'),    icon: ICONS.clients,   newTo: '/clients/new' },
         { to: '/projects',         label: t('nav.projects'),   icon: ICONS.projects },
         ...(isAdmin ? [{ to: '/admin/approvals',          label: t('nav.approvals'),         icon: ICONS.approvals }] : []),

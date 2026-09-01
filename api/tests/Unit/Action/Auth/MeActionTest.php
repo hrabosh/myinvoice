@@ -11,6 +11,8 @@ use MyInvoice\Middleware\AuthMiddleware;
 use MyInvoice\Middleware\SupplierScopeMiddleware;
 use MyInvoice\Repository\PasskeyCredentialRepository;
 use MyInvoice\Service\Auth\MfaPolicyService;
+use MyInvoice\Service\Auth\PermissionPolicy;
+use MyInvoice\Service\Auth\Permission;
 use MyInvoice\Service\Auth\SessionLockPolicy;
 use MyInvoice\Service\Deployment\DeploymentCapabilities;
 use PHPUnit\Framework\Attributes\AllowMockObjectsWithoutExpectations;
@@ -68,6 +70,7 @@ final class MeActionTest extends TestCase
             new SessionLockPolicy($config),
             $clock,
             new DeploymentCapabilities($config),
+            new PermissionPolicy(),
         );
         $request = (new ServerRequestFactory())
             ->createServerRequest('GET', '/api/auth/me')
@@ -105,6 +108,8 @@ final class MeActionTest extends TestCase
         self::assertSame('standalone', $body['deploymentMode']);
         self::assertSame('admin', $body['user']['platform_role']);
         self::assertNull($body['user']['supplier_role']);
+        self::assertContains(Permission::PlatformUsersManage->value, $body['permissions']);
+        self::assertContains(Permission::PriceListManage->value, $body['permissions']);
     }
 
     public function testManagedUserWithoutMembershipReceivesNoSuppliers(): void
@@ -144,6 +149,7 @@ final class MeActionTest extends TestCase
             new SessionLockPolicy($config),
             $clock,
             new DeploymentCapabilities($config),
+            new PermissionPolicy(),
         );
         $request = (new ServerRequestFactory())
             ->createServerRequest('GET', '/api/auth/me')
@@ -164,5 +170,6 @@ final class MeActionTest extends TestCase
         self::assertSame(0, $body['current_supplier_id']);
         self::assertSame('readonly', $body['user']['platform_role']);
         self::assertNull($body['user']['supplier_role']);
+        self::assertSame([], $body['permissions']);
     }
 }

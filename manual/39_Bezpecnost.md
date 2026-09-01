@@ -6,7 +6,7 @@ Bezpečnost MyInvoice stojí na několika navazujících vrstvách:
    brute-force ochrana a CAPTCHA
 2. **Silné MFA** — passkey nebo TOTP
 3. **Síťová izolace** — IP allowlist (volitelný, doporučeno v produkci)
-4. **Autorizace** — role-based access (admin / accountant / readonly)
+4. **Autorizace** — globální role a v managed režimu také oprávnění aktuální firmy
 5. **Audit** — activity log všech mutací
 6. **Zámek session** — serverové uzamčení PWA po nečinnosti
 
@@ -433,7 +433,7 @@ skutečnou klientskou IP z hlavičky `X-Forwarded-For`:
 
 ## 39.5 RBAC (role-based access)
 
-Tři role. Hierarchie: **admin > accountant > readonly**.
+Standalone používá tři globální role. Hierarchie: **admin > accountant > readonly**.
 
 | Schopnost | admin | accountant | readonly |
 |---|:---:|:---:|:---:|
@@ -459,16 +459,21 @@ Vhodné použití:
 - **readonly** — auditor, kontrolor nebo klient, který si má jen prohlížet a
   stahovat data (vč. DPH podkladů) bez rizika nechtěné změny.
 
+Managed režim odděluje globální roli od role v aktuální firmě. Tenantová role
+`supplier_owner` má běžná účetní oprávnění a navíc smí spravovat údaje, číselnou
+řadu, ceník a branding své firmy. Není globálním administrátorem a nemůže
+spravovat platformní uživatele, aktualizace ani konfiguraci jiné firmy. Frontend
+čte konkrétní seznam oprávnění ze session payloadu; právo neodvozuje jen z názvu role.
+
 ### Jak je to vynucené
 
-1. **Backend (`RoleMiddleware`)** — `readonly` smí výhradně `GET` requesty; jakýkoli
+1. **Backend (`RoleMiddleware` + permission policy)** — `readonly` smí výhradně `GET` requesty; jakýkoli
    zápis (`POST` / `PUT` / `PATCH` / `DELETE`) je odmítnut s `403`. Exporty i daňové
    výkazy jsou `GET`, proto k nim `readonly` má přístup. Jediná výjimka z pravidla
    „jen GET": **hromadný export** (Daně → Hromadný export) běží jako background job,
    takže jeho spuštění/zrušení/smazání jsou technicky `POST`/`DELETE` — věcně jde
    ale o čtení (sbalení existujících dokladů do ZIP), proto je povolen všem rolím.
-   Admin endpointy (uživatelé, nastavení, integrace…) mají navíc **kontrolu role
-   přímo v akci**.
+   Citlivé endpointy mají navíc kontrolu konkrétního oprávnění přímo v akci.
 2. **API token (PAT)** — role uživatele se kontroluje **před** scope tokenu, takže
    `readonly` uživatel nemůže obejít omezení ani tokenem se scopem `read_write`.
 3. **UI** — frontend podle role **skrývá zápisová tlačítka** (Nový / Upravit /

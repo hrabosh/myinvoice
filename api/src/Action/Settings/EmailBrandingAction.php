@@ -10,6 +10,8 @@ use MyInvoice\Infrastructure\Database\Connection;
 use MyInvoice\Middleware\AuthMiddleware;
 use MyInvoice\Middleware\SupplierScopeMiddleware;
 use MyInvoice\Service\ActivityLogger;
+use MyInvoice\Service\Auth\Permission;
+use MyInvoice\Service\Auth\PermissionPolicy;
 use MyInvoice\Service\IpMatcher;
 use MyInvoice\Service\Mail\SupplierLogoConverter;
 use Psr\Http\Message\ResponseInterface as Response;
@@ -40,13 +42,14 @@ final class EmailBrandingAction
         private readonly SupplierLogoConverter $converter,
         private readonly ActivityLogger $logger,
         private readonly IpMatcher $ipMatcher,
+        private readonly PermissionPolicy $permissions,
     ) {}
 
     /** POST /api/settings/email-branding/logo */
     public function uploadLogo(Request $request, Response $response): Response
     {
-        if (!$this->isAdmin($request)) {
-            return Json::error($response, 'forbidden', 'Pouze admin smí měnit branding.', 403);
+        if (!$this->canManage($request)) {
+            return Json::error($response, 'forbidden', 'Pro správu brandingu nemáš oprávnění.', 403);
         }
 
         $sid = (int) $request->getAttribute(SupplierScopeMiddleware::ATTR_CURRENT_ID, 0);
@@ -114,8 +117,8 @@ final class EmailBrandingAction
     /** DELETE /api/settings/email-branding/logo */
     public function deleteLogo(Request $request, Response $response): Response
     {
-        if (!$this->isAdmin($request)) {
-            return Json::error($response, 'forbidden', 'Pouze admin smí měnit branding.', 403);
+        if (!$this->canManage($request)) {
+            return Json::error($response, 'forbidden', 'Pro správu brandingu nemáš oprávnění.', 403);
         }
         $sid = (int) $request->getAttribute(SupplierScopeMiddleware::ATTR_CURRENT_ID, 0);
         if ($sid <= 0) {
@@ -147,9 +150,9 @@ final class EmailBrandingAction
         // user mohl exfiltrovat libovolný soubor, který admin předem podstrčil přes
         // logo_path mass-assign (CWE-915 + CWE-538, security report @andrejtomci #2).
         // Mass-assign na logo_path je už uzavřený v SettingsAction, ale tohle je
-        // druhá vrstva — preview je čistě admin funkce (live edit brandingu).
-        if (!$this->isAdmin($request)) {
-            return Json::error($response, 'forbidden', 'Pouze admin smí prohlížet branding.', 403);
+        // druhá vrstva — preview vyžaduje supplier_branding.manage (live edit brandingu).
+        if (!$this->canManage($request)) {
+            return Json::error($response, 'forbidden', 'Pro správu brandingu nemáš oprávnění.', 403);
         }
         $sid = (int) $request->getAttribute(SupplierScopeMiddleware::ATTR_CURRENT_ID, 0);
         if ($sid <= 0) {
@@ -307,10 +310,9 @@ TWIG;
             ->withHeader('Cache-Control', 'no-store');
     }
 
-    private function isAdmin(Request $request): bool
+    private function canManage(Request $request): bool
     {
-        $user = (array) $request->getAttribute(AuthMiddleware::ATTR_USER, []);
-        return isset($user['role']) && $user['role'] === 'admin';
+        return $this->permissions->allows($request, Permission::SupplierBrandingManage);
     }
 
     private function defaultProfileId(int $supplierId): ?int

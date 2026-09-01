@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace MyInvoice\Middleware;
 
 use MyInvoice\Http\Json;
+use MyInvoice\Service\Auth\Permission;
+use MyInvoice\Service\Auth\PermissionPolicy;
 use MyInvoice\Service\Tenant\SupplierAccessResolver;
 use Psr\Http\Message\ResponseInterface as Response;
 use Psr\Http\Message\ServerRequestInterface as Request;
@@ -189,6 +191,7 @@ final class RoleMiddleware implements MiddlewareInterface
     public function __construct(
         private readonly ResponseFactory $responseFactory,
         private readonly SupplierAccessResolver $supplierAccess,
+        private readonly PermissionPolicy $permissions,
     ) {}
 
     public function process(Request $request, Handler $handler): Response
@@ -255,6 +258,18 @@ final class RoleMiddleware implements MiddlewareInterface
             return Json::error($response, 'unauthenticated', 'Nepřihlášený uživatel.', 401);
         }
 
+        // Citlivé supplier-scoped operace mají vlastní permission význam. Tato
+        // větev je úmyslně před legacy admin/accountant fallbackem: supplier_owner
+        // dostane tenantové oprávnění, ale žádné platformní admin endpointy.
+        $requiredPermission = $this->requiredPermission($method, $path);
+        if ($requiredPermission !== null) {
+            if ($this->permissions->allows($request, $requiredPermission)) {
+                return $handler->handle($request);
+            }
+            $response = $this->responseFactory->createResponse(403);
+            return Json::error($response, 'forbidden', 'Pro tuto akci nemáš oprávnění.', 403);
+        }
+
         // admin smí všechno
         if ($role === 'admin') {
             return $handler->handle($request);
@@ -294,5 +309,27 @@ final class RoleMiddleware implements MiddlewareInterface
             if (preg_match($rulePattern, $path) === 1) return true;
         }
         return false;
+    }
+
+    private function requiredPermission(string $method, string $path): ?Permission
+    {
+        if ($method !== 'GET' && str_starts_with($path, '/api/price-list-items')) {
+            return Permission::PriceListManage;
+        }
+        if ($method === 'PUT' && in_array($path, [
+            '/api/settings/supplier',
+            '/api/settings/supplier/invoice-counter',
+        ], true)) {
+            return Permission::SupplierSettingsManage;
+        }
+        if (str_starts_with($path, '/api/settings/branding-profiles')
+            || str_starts_with($path, '/api/settings/email-branding')
+            || in_array($path, [
+                '/api/settings/supplier/logo',
+            ], true)
+        ) {
+            return Permission::SupplierBrandingManage;
+        }
+        return null;
     }
 }

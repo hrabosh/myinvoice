@@ -53,6 +53,24 @@ export type DeploymentModule =
   | 'selfUpdate'
   | 'myuctoUpgrade'
 
+export type Permission =
+  | 'invoice.read'
+  | 'invoice.write'
+  | 'invoice.issue'
+  | 'invoice.cancel'
+  | 'payment.write'
+  | 'client.read'
+  | 'client.write'
+  | 'project.write'
+  | 'price_list.manage'
+  | 'supplier_settings.manage'
+  | 'supplier_members.manage'
+  | 'supplier_branding.manage'
+  | 'supplier_exports.read'
+  | 'platform_settings.manage'
+  | 'platform_users.manage'
+  | 'platform_update.manage'
+
 export interface DeploymentContext {
   deploymentMode: 'standalone' | 'revizior_managed'
   productName: string
@@ -133,6 +151,7 @@ export interface AuthSessionContract {
 export interface MeResponse extends AuthSessionContract, DeploymentContext {
   current_supplier_id: number
   suppliers: SupplierBrief[]
+  permissions: Permission[]
 }
 
 export interface PasskeyCredential {

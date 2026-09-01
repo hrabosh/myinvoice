@@ -1,0 +1,20 @@
+import assert from 'node:assert/strict'
+import { readFile } from 'node:fs/promises'
+import test from 'node:test'
+
+const root = new URL('../src/', import.meta.url)
+
+test('price list navigation and routes use server permissions instead of the legacy admin role', async () => {
+  const [auth, router, layout] = await Promise.all([
+    readFile(new URL('stores/auth.ts', root), 'utf8'),
+    readFile(new URL('router/index.ts', root), 'utf8'),
+    readFile(new URL('components/layout/AppLayout.vue', root), 'utf8'),
+  ])
+
+  assert.match(auth, /permissions\.value = data\.permissions \|\| \[\]/)
+  assert.match(auth, /function hasPermission\(permission: Permission\)/)
+  assert.match(router, /requiresPermission: 'price_list\.manage'/)
+  assert.match(router, /!auth\.hasPermission\(requiredPermission\)/)
+  assert.match(layout, /auth\.hasPermission\('price_list\.manage'\)/)
+  assert.doesNotMatch(layout, /isAdmin \? \[\{ to: '\/admin\/price-list'/)
+})

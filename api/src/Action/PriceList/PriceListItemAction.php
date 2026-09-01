@@ -9,6 +9,8 @@ use MyInvoice\Http\Json;
 use MyInvoice\Http\SupplierGuard;
 use MyInvoice\Middleware\AuthMiddleware;
 use MyInvoice\Repository\PriceListItemRepository;
+use MyInvoice\Service\Auth\Permission;
+use MyInvoice\Service\Auth\PermissionPolicy;
 use MyInvoice\Service\ActivityLogger;
 use MyInvoice\Service\Invoice\PriceListItemResolver;
 use MyInvoice\Service\Invoice\PriceListResolutionException;
@@ -23,6 +25,7 @@ final class PriceListItemAction
         private readonly PriceListItemResolver $resolver,
         private readonly ActivityLogger $logger,
         private readonly IpMatcher $ipMatcher,
+        private readonly PermissionPolicy $permissions,
     ) {}
 
     public function list(Request $request, Response $response): Response
@@ -136,7 +139,7 @@ final class PriceListItemAction
 
     public function create(Request $request, Response $response): Response
     {
-        if (!$this->isAdmin($request)) return $this->adminOnly($response);
+        if (!$this->canManage($request)) return $this->manageOnly($response);
         $supplierId = SupplierGuard::currentId($request);
         $body = $this->normalizeBody((array) ($request->getParsedBody() ?? []));
         $error = $this->validateItem($supplierId, $body, true);
@@ -164,7 +167,7 @@ final class PriceListItemAction
 
     public function update(Request $request, Response $response, array $args): Response
     {
-        if (!$this->isAdmin($request)) return $this->adminOnly($response);
+        if (!$this->canManage($request)) return $this->manageOnly($response);
         $supplierId = SupplierGuard::currentId($request);
         $id = (int) ($args['id'] ?? 0);
         $before = $this->repo->find($id, $supplierId);
@@ -194,7 +197,7 @@ final class PriceListItemAction
 
     public function delete(Request $request, Response $response, array $args): Response
     {
-        if (!$this->isAdmin($request)) return $this->adminOnly($response);
+        if (!$this->canManage($request)) return $this->manageOnly($response);
         $supplierId = SupplierGuard::currentId($request);
         $id = (int) ($args['id'] ?? 0);
         if ($this->repo->find($id, $supplierId) === null) {
@@ -207,7 +210,7 @@ final class PriceListItemAction
 
     public function upsertPrice(Request $request, Response $response, array $args): Response
     {
-        if (!$this->isAdmin($request)) return $this->adminOnly($response);
+        if (!$this->canManage($request)) return $this->manageOnly($response);
         $supplierId = SupplierGuard::currentId($request);
         $id = (int) ($args['id'] ?? 0);
         $currency = strtoupper((string) ($args['currencyCode'] ?? ''));
@@ -238,7 +241,7 @@ final class PriceListItemAction
 
     public function deletePrice(Request $request, Response $response, array $args): Response
     {
-        if (!$this->isAdmin($request)) return $this->adminOnly($response);
+        if (!$this->canManage($request)) return $this->manageOnly($response);
         $supplierId = SupplierGuard::currentId($request);
         $id = (int) ($args['id'] ?? 0);
         $currency = strtoupper((string) ($args['currencyCode'] ?? ''));
@@ -268,7 +271,7 @@ final class PriceListItemAction
 
     public function upsertCustomerOverride(Request $request, Response $response, array $args): Response
     {
-        if (!$this->isAdmin($request)) return $this->adminOnly($response);
+        if (!$this->canManage($request)) return $this->manageOnly($response);
         $supplierId = SupplierGuard::currentId($request);
         $id = (int) ($args['id'] ?? 0);
         $clientId = (int) ($args['clientId'] ?? 0);
@@ -300,7 +303,7 @@ final class PriceListItemAction
 
     public function deleteCustomerOverride(Request $request, Response $response, array $args): Response
     {
-        if (!$this->isAdmin($request)) return $this->adminOnly($response);
+        if (!$this->canManage($request)) return $this->manageOnly($response);
         $supplierId = SupplierGuard::currentId($request);
         $id = (int) ($args['id'] ?? 0);
         $clientId = (int) ($args['clientId'] ?? 0);
@@ -418,15 +421,14 @@ final class PriceListItemAction
         return preg_match('/^[A-Z]{3}$/', $code) === 1;
     }
 
-    private function isAdmin(Request $request): bool
+    private function canManage(Request $request): bool
     {
-        $user = (array) $request->getAttribute(AuthMiddleware::ATTR_USER, []);
-        return ($user['role'] ?? '') === 'admin';
+        return $this->permissions->allows($request, Permission::PriceListManage);
     }
 
-    private function adminOnly(Response $response): Response
+    private function manageOnly(Response $response): Response
     {
-        return Json::error($response, 'forbidden', 'Ceník může spravovat pouze administrátor.', 403);
+        return Json::error($response, 'forbidden', 'Pro správu ceníku nemáš oprávnění.', 403);
     }
 
     private function log(Request $request, string $action, int $entityId, array $details): void

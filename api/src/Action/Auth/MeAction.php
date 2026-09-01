@@ -11,6 +11,7 @@ use MyInvoice\Middleware\AuthMiddleware;
 use MyInvoice\Middleware\SupplierScopeMiddleware;
 use MyInvoice\Repository\PasskeyCredentialRepository;
 use MyInvoice\Service\Auth\MfaPolicyService;
+use MyInvoice\Service\Auth\PermissionPolicy;
 use MyInvoice\Service\Auth\SessionLockPolicy;
 use MyInvoice\Service\Deployment\DeploymentCapabilities;
 use Psr\Clock\ClockInterface;
@@ -28,6 +29,7 @@ final class MeAction
         private readonly SessionLockPolicy $lockPolicy,
         private readonly ClockInterface $clock,
         private readonly DeploymentCapabilities $capabilities,
+        private readonly PermissionPolicy $permissions,
     ) {}
 
     public function __invoke(Request $request, Response $response): Response
@@ -114,6 +116,11 @@ final class MeAction
                 ? self::isoUtc($lastActivity->modify(sprintf('+%d minutes', $effectiveTimeout)))
                 : null;
         }
+        $permissions = $this->capabilities->isReviziorManaged()
+            && $platformRole !== 'admin'
+            && $currentSupplierId <= 0
+                ? []
+                : $this->permissions->permissions($request);
 
         return Json::ok($response, array_merge([
             'user' => [
@@ -141,6 +148,7 @@ final class MeAction
             'lock_after_minutes'  => $effectiveTimeout,
             'server_time'         => self::isoUtc($now),
             'idle_expires_at'     => $idleExpiresAt,
+            'permissions'         => $permissions,
         ], $this->capabilities->publicPayload()));
     }
 

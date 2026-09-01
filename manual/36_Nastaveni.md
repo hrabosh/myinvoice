@@ -120,7 +120,9 @@ dodavateli), nahrazuje volný textový vstup za dropdown.
 
 ### 36.1.5 Ceníkové položky
 
-**Prodej → Ceník** (jen administrátor) spravuje ceník aktuálního dodavatele.
+**Prodej → Ceník** spravuje ceník aktuálního dodavatele. Ve standalone instalaci
+jej spravuje administrátor; v managed režimu také vlastník aktuální firmy
+(`supplier_owner`). Účetní a uživatel pouze pro čtení ceník spravovat nemohou.
 Každá položka má kód, název, fakturační popis, jednotku, sazbu DPH a povinnou
 základní cenu v jedné měně. Kód je unikátní pouze v rámci dodavatele.
 Přehled lze prohledávat a filtrovat podle měny a aktivního či archivovaného
@@ -199,7 +201,9 @@ který má být v jedné z firem jen **readonly**.
 
 > 🛈 Role **admin** je celoinstanční — přiřazení firem se u ní neuplatní a admin
 > vidí vždy všechny firmy. Proto se instalace nedá „vyzamknout". Ze stejného
-> důvodu nejde per-firmu nastavit role `admin`, jen `accountant` a `readonly`.
+> důvodu nejde per-firmu nastavit role `admin`. Managed instalace navíc používá
+> roli `supplier_owner`: vlastník může pro aktuální firmu spravovat její údaje,
+> číselnou řadu, ceník a branding, ale nezíská globální správu instalace.
 
 Omezení hlídá server, ne jen UI:
 

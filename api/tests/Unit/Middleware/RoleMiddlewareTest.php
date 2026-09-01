@@ -386,6 +386,52 @@ final class RoleMiddlewareTest extends TestCase
             $this->request('GET', '/api/admin/users', 'readonly'),
             $this->okHandler(),
         )->getStatusCode());
+        self::assertSame(403, $middleware->process(
+            $this->request('GET', '/api/admin/update/status', 'readonly'),
+            $this->okHandler(),
+        )->getStatusCode());
+        self::assertSame(403, $middleware->process(
+            $this->request('POST', '/api/suppliers', 'readonly'),
+            $this->okHandler(),
+        )->getStatusCode());
+        self::assertSame(403, $middleware->process(
+            $this->request('PUT', '/api/suppliers/7', 'readonly'),
+            $this->okHandler(),
+        )->getStatusCode());
+    }
+
+    public function testSupplierOwnerCanManageTenantPriceListSettingsAndBranding(): void
+    {
+        $middleware = $this->middlewareWithOverride('supplier_owner');
+
+        foreach ([
+            ['POST', '/api/price-list-items'],
+            ['PUT', '/api/settings/supplier'],
+            ['PUT', '/api/settings/supplier/invoice-counter'],
+            ['GET', '/api/settings/branding-profiles'],
+            ['POST', '/api/settings/email-branding/logo'],
+        ] as [$method, $path]) {
+            self::assertSame(204, $middleware->process(
+                $this->request($method, $path, 'readonly'),
+                $this->okHandler(),
+            )->getStatusCode(), "$method $path");
+        }
+    }
+
+    public function testAccountantCannotManageOwnerOnlyTenantConfiguration(): void
+    {
+        foreach ([
+            ['POST', '/api/price-list-items'],
+            ['PUT', '/api/settings/supplier'],
+            ['PUT', '/api/settings/supplier/invoice-counter'],
+            ['GET', '/api/settings/branding-profiles'],
+            ['POST', '/api/settings/email-branding/logo'],
+        ] as [$method, $path]) {
+            self::assertSame(403, $this->middleware()->process(
+                $this->request($method, $path, 'accountant'),
+                $this->okHandler(),
+            )->getStatusCode(), "$method $path");
+        }
     }
 
     public function testSupplierOwnerKeepsPlatformAndSupplierRolesSeparateInRequest(): void
@@ -416,7 +462,11 @@ final class RoleMiddlewareTest extends TestCase
         $resolver->method('resolve')->willReturn(
             new \MyInvoice\Service\Tenant\SupplierAccess(0, false, null),
         );
-        return new RoleMiddleware(new ResponseFactory(), $resolver);
+        return new RoleMiddleware(
+            new ResponseFactory(),
+            $resolver,
+            new \MyInvoice\Service\Auth\PermissionPolicy(),
+        );
     }
 
     private function middlewareWithOverride(string $role): RoleMiddleware
@@ -425,7 +475,11 @@ final class RoleMiddlewareTest extends TestCase
         $resolver->method('resolve')->willReturn(
             new \MyInvoice\Service\Tenant\SupplierAccess(7, false, $role),
         );
-        return new RoleMiddleware(new ResponseFactory(), $resolver);
+        return new RoleMiddleware(
+            new ResponseFactory(),
+            $resolver,
+            new \MyInvoice\Service\Auth\PermissionPolicy(),
+        );
     }
 
     private function request(string $method, string $path, string $role): ServerRequestInterface

@@ -4,6 +4,7 @@ import {
   authApi,
   type DeploymentContext,
   type DeploymentModule,
+  type Permission,
   type User,
   type SetupStatus,
   type SessionState,
@@ -17,6 +18,7 @@ export const useAuthStore = defineStore('auth', () => {
   const csrfToken = ref<string>('')
   const setupStatus = ref<SetupStatus | null>(null)
   const deployment = ref<DeploymentContext | null>(null)
+  const permissions = ref<Permission[]>([])
   const allowedMfaMethods = ref<Array<'passkey' | 'totp'>>([])
   const requireMfa = ref(false)
   const loading = ref(false)
@@ -49,6 +51,10 @@ export const useAuthStore = defineStore('auth', () => {
     return deployment.value?.modules[module] !== false
   }
 
+  function hasPermission(permission: Permission) {
+    return permissions.value.includes(permission)
+  }
+
   function setSessionCsrfToken(token: string) {
     csrfToken.value = token
     setCsrfToken(token || null)
@@ -64,6 +70,7 @@ export const useAuthStore = defineStore('auth', () => {
     try {
       const data = await authApi.me()
       deployment.value = data
+      permissions.value = data.permissions || []
       user.value = data.user
       setSessionCsrfToken(data.csrf_token)
       setMfaPolicy(data.require_mfa, data.allowed_mfa_methods)
@@ -89,6 +96,7 @@ export const useAuthStore = defineStore('auth', () => {
       }
       if (!error?.response && user.value !== null) return false
       user.value = null
+      permissions.value = []
       setSessionCsrfToken('')
       setMfaPolicy(false, [])
       lockedSession.value = null
@@ -136,6 +144,7 @@ export const useAuthStore = defineStore('auth', () => {
     setMfaPolicy(false, [])
     lockedSession.value = null
     profileHydrated.value = false
+    permissions.value = []
     useSupplierStore().setAvailable([], 0)
   }
 
@@ -180,6 +189,7 @@ export const useAuthStore = defineStore('auth', () => {
     csrfToken,
     setupStatus,
     deployment,
+    permissions,
     allowedMfaMethods,
     requireMfa,
     loading,
@@ -197,6 +207,7 @@ export const useAuthStore = defineStore('auth', () => {
     canWrite,
     fetchSetupStatus,
     moduleEnabled,
+    hasPermission,
     setSessionCsrfToken,
     setMfaPolicy,
     setLockedSession,

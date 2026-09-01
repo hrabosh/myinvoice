@@ -10,6 +10,8 @@ use MyInvoice\Infrastructure\Database\Connection;
 use MyInvoice\Middleware\AuthMiddleware;
 use MyInvoice\Middleware\SupplierScopeMiddleware;
 use MyInvoice\Service\ActivityLogger;
+use MyInvoice\Service\Auth\Permission;
+use MyInvoice\Service\Auth\PermissionPolicy;
 use MyInvoice\Service\IpMatcher;
 use MyInvoice\Service\Mail\RecipientResolver;
 use MyInvoice\Service\Mail\SafeLogoPath;
@@ -41,6 +43,7 @@ final class SettingsAction
         private readonly \MyInvoice\Service\Ares\SupplierRegistryEnricher $enricher,
         private readonly \MyInvoice\Service\Report\EpoIdentityValidator $epoValidator,
         private readonly \MyInvoice\Repository\UserSupplierRepository $userSuppliers,
+        private readonly PermissionPolicy $permissions,
     ) {}
 
     /** Aktuální supplier (z X-Supplier-Id middleware). */
@@ -50,7 +53,7 @@ final class SettingsAction
         return $this->respondSupplier($response, $id);
     }
 
-    /** Update aktuálního supplier (admin). */
+    /** Update aktuálního supplier (supplier_settings.manage). */
     public function updateSupplier(Request $request, Response $response): Response
     {
         $id = (int) $request->getAttribute(SupplierScopeMiddleware::ATTR_CURRENT_ID, 0);
@@ -245,11 +248,19 @@ final class SettingsAction
         return Json::ok($response, ['id' => $newSupplierId], 201);
     }
 
-    /** PUT /api/suppliers/{id} (admin). */
+    /** PUT /api/suppliers/{id} (globální admin); current-supplier alias používá permission policy. */
     public function updateSupplierById(Request $request, Response $response, array $args): Response
     {
-        if (!$this->guard($request, $response, $err)) return $err;
         $id = (int) ($args['id'] ?? 0);
+        $isCurrentSupplierRoute = $request->getUri()->getPath() === '/api/settings/supplier'
+            && $id === (int) $request->getAttribute(SupplierScopeMiddleware::ATTR_CURRENT_ID, 0);
+        if ($isCurrentSupplierRoute) {
+            if (!$this->permissions->allows($request, Permission::SupplierSettingsManage)) {
+                return Json::error($response, 'forbidden', 'Pro správu nastavení firmy nemáš oprávnění.', 403);
+            }
+        } elseif (!$this->guard($request, $response, $err)) {
+            return $err;
+        }
         if ($id <= 0) return Json::error($response, 'validation_failed', 'Neplatné id.', 400);
         if ($this->membershipDenies($request, $id)) {
             return Json::error($response, 'not_found', 'Supplier nenalezen.', 404);
