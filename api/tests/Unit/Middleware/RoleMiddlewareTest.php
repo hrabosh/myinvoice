@@ -400,6 +400,43 @@ final class RoleMiddlewareTest extends TestCase
         )->getStatusCode());
     }
 
+    public function testPlatformPermissionsNeverComeFromSupplierOwnerRole(): void
+    {
+        $middleware = $this->middlewareWithOverride('supplier_owner');
+
+        foreach ([
+            ['GET', '/api/admin/users'],
+            ['PUT', '/api/admin/users/19'],
+            ['GET', '/api/admin/activity-log'],
+            ['POST', '/api/admin/cron-jobs/cron-cleanup/run'],
+            ['PUT', '/api/admin/imports/idoklad/credentials'],
+            ['GET', '/api/admin/update/status'],
+            ['POST', '/api/admin/myucto-upgrade/trigger'],
+            ['POST', '/api/suppliers'],
+            ['DELETE', '/api/suppliers/7'],
+        ] as [$method, $path]) {
+            self::assertSame(403, $middleware->process(
+                $this->request($method, $path, 'readonly'),
+                $this->okHandler(),
+            )->getStatusCode(), "$method $path");
+        }
+    }
+
+    public function testPlatformAdminPermissionsUsePlatformRole(): void
+    {
+        foreach ([
+            ['GET', '/api/admin/users'],
+            ['GET', '/api/admin/activity-log'],
+            ['GET', '/api/admin/update/status'],
+            ['POST', '/api/suppliers'],
+        ] as [$method, $path]) {
+            self::assertSame(204, $this->middleware()->process(
+                $this->request($method, $path, 'admin'),
+                $this->okHandler(),
+            )->getStatusCode(), "$method $path");
+        }
+    }
+
     public function testSupplierOwnerCanManageTenantPriceListSettingsAndBranding(): void
     {
         $middleware = $this->middlewareWithOverride('supplier_owner');

@@ -166,7 +166,7 @@ const ICONS = {
 }
 
 const navSections = computed<NavSection[]>(() => {
-  const isAdmin = auth.user?.role === 'admin'
+  const isAdmin = auth.hasPermission('platform_settings.manage')
   // Import dokladů smí i účetní (readonly ne) — konfigurace integrací zůstává admin-only.
   const canWrite = auth.canWrite
   // Daňový optimalizátor (paušál vs standardní režim) je jen pro OSVČ (fyzická osoba).

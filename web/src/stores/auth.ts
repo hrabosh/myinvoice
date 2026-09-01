@@ -37,7 +37,7 @@ export const useAuthStore = defineStore('auth', () => {
 
   // Role helpers. readonly vidí vše co účetní (vč. exportů a DPH výkazů — vše jsou GETy),
   // ale nesmí nic měnit → canWrite gatuje všechna zápisová tlačítka v UI.
-  const isAdmin = computed(() => user.value?.role === 'admin')
+  const isAdmin = computed(() => (user.value?.platform_role ?? user.value?.role) === 'admin')
   const isReadonly = computed(() => user.value?.role === 'readonly')
   const canWrite = computed(() => user.value != null && user.value.role !== 'readonly')
 

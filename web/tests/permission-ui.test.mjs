@@ -34,3 +34,17 @@ test('company member management is tenant scoped and permission driven', async (
   assert.match(router, /requiresPermission: 'supplier_members\.manage'/)
   assert.match(layout, /auth\.hasPermission\('supplier_members\.manage'\)/)
 })
+
+test('platform navigation and routes use platform permissions only', async () => {
+  const [auth, router, layout] = await Promise.all([
+    readFile(new URL('stores/auth.ts', root), 'utf8'),
+    readFile(new URL('router/index.ts', root), 'utf8'),
+    readFile(new URL('components/layout/AppLayout.vue', root), 'utf8'),
+  ])
+
+  assert.match(auth, /platform_role \?\? user\.value\?\.role/)
+  assert.match(router, /requiresPermission: 'platform_users\.manage'/)
+  assert.match(router, /requiresPermission: 'platform_settings\.manage'/)
+  assert.match(router, /requiresPermission: 'platform_update\.manage'/)
+  assert.match(layout, /auth\.hasPermission\('platform_settings\.manage'\)/)
+})

@@ -313,6 +313,20 @@ final class RoleMiddleware implements MiddlewareInterface
 
     private function requiredPermission(string $method, string $path): ?Permission
     {
+        // Platformní oprávnění se vždy odvozují z users.role. Explicitní mapování
+        // je před tenantovými pravidly, aby žádná supplier role ani budoucí
+        // rozšíření ACCOUNTANT_RULES nemohly otevřít správu celé instalace.
+        if ($path === '/api/admin/users' || str_starts_with($path, '/api/admin/users/')) {
+            return Permission::PlatformUsersManage;
+        }
+        if (str_starts_with($path, '/api/admin/update')
+            || str_starts_with($path, '/api/admin/myucto-upgrade')
+        ) {
+            return Permission::PlatformUpdateManage;
+        }
+        if ($this->isPlatformSettingsPath($method, $path)) {
+            return Permission::PlatformSettingsManage;
+        }
         if ($method !== 'GET' && str_starts_with($path, '/api/price-list-items')) {
             return Permission::PriceListManage;
         }
@@ -336,5 +350,27 @@ final class RoleMiddleware implements MiddlewareInterface
             return Permission::SupplierBrandingManage;
         }
         return null;
+    }
+
+    private function isPlatformSettingsPath(string $method, string $path): bool
+    {
+        if ($method !== 'GET' && ($path === '/api/suppliers' || str_starts_with($path, '/api/suppliers/'))) {
+            return true;
+        }
+        foreach ([
+            '/api/admin/activity-log',
+            '/api/admin/sent-emails',
+            '/api/admin/smtp-log-analysis',
+            '/api/admin/cron-jobs',
+            '/api/admin/approvals',
+            '/api/admin/email-templates',
+        ] as $prefix) {
+            if ($path === $prefix || str_starts_with($path, $prefix . '/')) return true;
+        }
+        if (preg_match('#^/api/admin/invoices/[0-9]+/smtp-log$#', $path) === 1) {
+            return true;
+        }
+        return $method !== 'GET'
+            && preg_match('#^/api/admin/imports/(idoklad|fakturoid|anthropic)/credentials$#', $path) === 1;
     }
 }

@@ -41,11 +41,11 @@ const routes: RouteRecordRaw[] = [
       { path: 'bank',                   name: 'bank-statements', component: () => import('@/pages/bank/BankPage.vue') },
       { path: 'bank/:id(\\d+)',         name: 'bank-detail',     component: () => import('@/pages/bank/StatementDetail.vue') },
       // Admin (M6)
-      { path: 'admin/activity-log',     name: 'activity-log',   component: () => import('@/pages/admin/ActivityLog.vue'), meta: { adminOnly: true } },
-      { path: 'admin/sent-emails',      name: 'sent-emails',    component: () => import('@/pages/admin/SentEmails.vue'), meta: { adminOnly: true } },
-      { path: 'admin/cron-jobs',        name: 'cron-jobs',      component: () => import('@/pages/admin/CronJobs.vue'),    meta: { adminOnly: true } },
-      { path: 'admin/users',            name: 'admin-users',    component: () => import('@/pages/admin/Users.vue'),       meta: { adminOnly: true } },
-      { path: 'admin/settings',         name: 'admin-settings', component: () => import('@/pages/admin/Settings.vue'),    meta: { adminOnly: true } },
+      { path: 'admin/activity-log',     name: 'activity-log',   component: () => import('@/pages/admin/ActivityLog.vue'), meta: { requiresPermission: 'platform_settings.manage' } },
+      { path: 'admin/sent-emails',      name: 'sent-emails',    component: () => import('@/pages/admin/SentEmails.vue'), meta: { requiresPermission: 'platform_settings.manage' } },
+      { path: 'admin/cron-jobs',        name: 'cron-jobs',      component: () => import('@/pages/admin/CronJobs.vue'),    meta: { requiresPermission: 'platform_settings.manage' } },
+      { path: 'admin/users',            name: 'admin-users',    component: () => import('@/pages/admin/Users.vue'),       meta: { requiresPermission: 'platform_users.manage' } },
+      { path: 'admin/settings',         name: 'admin-settings', component: () => import('@/pages/admin/Settings.vue'),    meta: { requiresPermission: 'platform_settings.manage' } },
       // Bývalá stránka Systém → Bankovní účty je nyní součástí /bank (Finance) jako záložky.
       // Redirect zachovává bookmarks vč. původního ?tab=.
       {
@@ -60,14 +60,14 @@ const routes: RouteRecordRaw[] = [
       // /admin/suppliers byla samostatná stránka — Suppliers jsou nyní embedded jako první tab v Codebooks.
       // Redirect zachovává bookmarks / staré odkazy.
       { path: 'admin/suppliers',        name: 'admin-suppliers', redirect: '/admin/codebooks' },
-      { path: 'admin/codebooks',        name: 'admin-codebooks', component: () => import('@/pages/admin/Codebooks.vue'),  meta: { adminOnly: true } },
+      { path: 'admin/codebooks',        name: 'admin-codebooks', component: () => import('@/pages/admin/Codebooks.vue'),  meta: { requiresPermission: 'platform_settings.manage' } },
       { path: 'admin/electronic-signatures', name: 'admin-electronic-signatures', component: () => import('@/pages/admin/ElectronicSignatures.vue'), meta: { requiresWrite: true, signingProfiles: true } },
       { path: 'admin/export',           name: 'admin-export',    component: () => import('@/pages/admin/Export.vue') },
       // Import dokladů (upload Pohoda/ISDOC/PDF + sken inboxu) je práce s daty, ne
       // konfigurace → účetní ano, readonly ne. Konfigurace integrací zůstává v
       // admin-only Integracích.
       { path: 'admin/import',           name: 'admin-import',    component: () => import('@/pages/admin/Imports.vue'),    meta: { requiresWrite: true, requiresSupplier: true } },
-      { path: 'admin/integrations',     name: 'admin-integrations', component: () => import('@/pages/admin/Integrations.vue'), meta: { adminOnly: true } },
+      { path: 'admin/integrations',     name: 'admin-integrations', component: () => import('@/pages/admin/Integrations.vue'), meta: { requiresPermission: 'platform_settings.manage' } },
       { path: 'crm',                    name: 'crm-dashboard',      component: () => import('@/pages/crm/CrmDashboard.vue') },
       { path: 'reports/dph',            name: 'reports-dph',        component: () => import('@/pages/reports/DphPriznaniReport.vue'), meta: { module: 'tax' } },
       { path: 'reports/kh',             name: 'reports-kh',         component: () => import('@/pages/reports/KontrolniHlaseniReport.vue'), meta: { module: 'tax' } },
@@ -78,10 +78,10 @@ const routes: RouteRecordRaw[] = [
       { path: 'reports/monthly-export', name: 'reports-monthly-export', component: () => import('@/pages/reports/MonthlyExportReport.vue'), meta: { module: 'tax' } },
       { path: 'reports/oss',            name: 'reports-oss',        component: () => import('@/pages/reports/OssReport.vue'), meta: { requiresOss: true, module: 'tax' } },
       { path: 'tax',                    name: 'tax-optimizer',      component: () => import('@/pages/tax/TaxOptimizer.vue'), meta: { module: 'tax' } },
-      { path: 'admin/email-templates',  name: 'admin-email-templates', component: () => import('@/pages/admin/EmailTemplates.vue'), meta: { adminOnly: true } },
+      { path: 'admin/email-templates',  name: 'admin-email-templates', component: () => import('@/pages/admin/EmailTemplates.vue'), meta: { requiresPermission: 'platform_settings.manage' } },
       // Sekce E-maily — záložky: Odeslané / Šablony / Elektronické podpisy (vzor Codebooks)
-      { path: 'admin/emails',           name: 'admin-emails',    component: () => import('@/pages/admin/Emails.vue'), meta: { adminOnly: true } },
-      { path: 'admin/approvals',        name: 'admin-approvals', component: () => import('@/pages/admin/Approvals.vue'), meta: { adminOnly: true } },
+      { path: 'admin/emails',           name: 'admin-emails',    component: () => import('@/pages/admin/Emails.vue'), meta: { requiresPermission: 'platform_settings.manage' } },
+      { path: 'admin/approvals',        name: 'admin-approvals', component: () => import('@/pages/admin/Approvals.vue'), meta: { requiresPermission: 'platform_settings.manage' } },
       { path: 'admin/price-list',       name: 'admin-price-list', component: () => import('@/pages/admin/PriceList.vue'), meta: { requiresPermission: 'price_list.manage', requiresSupplier: true } },
       { path: 'admin/price-list/new',   name: 'admin-price-list-new', component: () => import('@/pages/admin/PriceListForm.vue'), meta: { requiresPermission: 'price_list.manage', requiresSupplier: true } },
       { path: 'admin/price-list/:id(\\d+)/edit', name: 'admin-price-list-edit', component: () => import('@/pages/admin/PriceListForm.vue'), meta: { requiresPermission: 'price_list.manage', requiresSupplier: true } },
@@ -90,8 +90,8 @@ const routes: RouteRecordRaw[] = [
       { path: 'recurring/new',          name: 'recurring-new',    component: () => import('@/pages/recurring/RecurringForm.vue'), meta: { requiresWrite: true, requiresSupplier: true } },
       { path: 'recurring/:id(\\d+)',    name: 'recurring-detail', component: () => import('@/pages/recurring/RecurringDetail.vue') },
       { path: 'recurring/:id(\\d+)/edit', name: 'recurring-edit', component: () => import('@/pages/recurring/RecurringForm.vue'), meta: { requiresWrite: true, requiresSupplier: true } },
-      { path: 'admin/update',           name: 'admin-update',    component: () => import('@/pages/admin/Update.vue'),    meta: { adminOnly: true, module: 'selfUpdate' } },
-      { path: 'admin/upgrade',          name: 'admin-myucto-upgrade', component: () => import('@/pages/admin/MyuctoUpgrade.vue'), meta: { adminOnly: true, module: 'myuctoUpgrade' } },
+      { path: 'admin/update',           name: 'admin-update',    component: () => import('@/pages/admin/Update.vue'),    meta: { requiresPermission: 'platform_update.manage', module: 'selfUpdate' } },
+      { path: 'admin/upgrade',          name: 'admin-myucto-upgrade', component: () => import('@/pages/admin/MyuctoUpgrade.vue'), meta: { requiresPermission: 'platform_update.manage', module: 'myuctoUpgrade' } },
       // Staré profilové URL zůstávají funkční, ale UI je zobrazuje jako záložky
       // na /profile/password. Redirecty zachovávají ostatní query stringy.
       { path: 'profile/totp',           name: 'profile-totp',          redirect: (to) => ({ path: '/profile/password', query: { ...to.query, tab: 'totp' } }) },

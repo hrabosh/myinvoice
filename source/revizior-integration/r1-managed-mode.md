@@ -1,6 +1,6 @@
 # R1 managed mode — implementovaný základ
 
-> Stav: deployment, tenant membership, permission policy a platform bootstrap hotové; audit action guardů a session část R1 zůstávají otevřené
+> Stav: deployment, tenant membership, permission policy, platform bootstrap a audit action guardů hotové; session vazba a SSO navazují v R2
 > Datum: 2026-09-01
 
 ## Hotovo
@@ -43,6 +43,9 @@
   jednoho platform admina bez supplier membershipu, nepřijímá heslo v argumentu,
   vyžaduje povinné MFA a každé úspěšné použití audituje; Linux a Windows mají
   odpovídající wrapper.
+- globální administrace uživatelů, nastavení a aktualizací je v backendu i Vue routeru
+  explicitně chráněna `platform_*` permissions; tenantový `supplier_owner` ji nemůže
+  zdědit z efektivní supplier role.
 
 ## Konfigurace
 
@@ -60,13 +63,13 @@
 `app_url` je autoritativní návratová adresa. UI nikdy nepoužívá `return_to` z query stringu.
 Managed konfigurace bez absolutní HTTPS adresy failne při startu aplikace.
 
-## Otevřené části R1
+## Návaznost na R2
 
-- dokončení oddělení globální platform role od efektivní supplier role ve všech action guardech;
-- session version/revocation;
-- SSO vstupní endpoint (v roadmapě spolu se service auth v R2).
+- `revizior_user_links.session_version` a cílená revokace externí identity;
+- SSO vstupní endpoint a service auth.
 
-Dokud nejsou tyto body hotové, managed mode je integrační základ, ne produkční cutover gate.
+Tyto body vyžadují externí user link a podepsaný ticket, proto patří do atomického R2
+slice. Do jeho dokončení je managed mode integrační základ, ne produkční cutover gate.
 
 ## Kontrola MyÚčto upstreamu
 
@@ -88,10 +91,10 @@ z backend PHP kontejneru. Prohlížeč používá výchozí lokální port `8082
 ## Ověření slice
 
 - focused R1 PHPUnit: 43 testů / 231 assertions;
-- unit + architecture PHPUnit: 1 711 testů / 5 559 assertions, bez failure
+- unit + architecture PHPUnit: 1 713 testů / 5 572 assertions, bez failure
   (67 DB-dependent skipů, 1 existující deprecation);
 - focused PHPStan level 0: bez chyb;
-- frontend PWA testy: 64/64;
+- frontend PWA testy: 65/65;
 - `pnpm build`: type-check i produkční Vite build zelené;
 - migrace `0151` aplikovaná přes `migrate.php`; opakovaný běh bez pending migrací;
 - manuál: HTML 42 kapitol a PDF export zelené.
