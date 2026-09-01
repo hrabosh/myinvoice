@@ -50,6 +50,7 @@ snapshot nic neblokuje — kód mimo něj se uloží i odešle, jen s upozorněn
 |---|---|
 | `docker-build.{sh,ps1}` | `docker compose build app` — postaví image (default **alpine/nginx** z `Dockerfile.alpine`; volitelné `--no-cache`, `--pull`) |
 | `docker-install.{sh,ps1}` | First-run setup: vygeneruje `.env` + `cfg.docker.php`, **preferuje GHCR pull** (lokální build jen s `--build` / `MYINVOICE_INSTALL_MODE=source`), `up -d`, počká na DB healthcheck, spustí migrace, vypíše URL setup wizardu |
+| `revizior-bootstrap-platform-admin.{sh,ps1}` | Managed-only bootstrap jediného break-glass platform admina; heslo čte ze STDIN, vyžaduje povinné MFA a nevytváří supplier membership |
 | `docker-ghcr.{sh,ps1}` | One-click install **z pre-built image na GHCR** (`ghcr.io/radekhulan/myinvoice:latest` = alpine/nginx) — žádný local build. Stejně jako install vygeneruje `.env` + `cfg.docker.php`, místo `build` udělá `pull`, pak `up -d` + migrace |
 | `docker-update.{sh,ps1}` | Update běžící instance — **detekuje režim z image běžícího kontejneru**: registry (`ghcr.io/...`) → `pull`, lokální build → `git pull` + rebuild; pak `up -d` + migrace + úklid dangling vrstev. Přebití `MYINVOICE_UPDATE_MODE=registry\|source`. (Existující Debian instalace se přechodem `:latest` na alpine zmigrují samy při příštím updatu — drop-in.) |
 | `docker-prune-images.{sh,ps1}` | Detekuje a maže **obsolete** myinvoice image (nepoužívané kontejnerem ani compose) + dangling vrstvy. `--dry-run` / `-DryRun` jen vypíše. Chrání běžící i compose-referencované image |

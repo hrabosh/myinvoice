@@ -1,6 +1,6 @@
 # R1 managed mode — implementovaný základ
 
-> Stav: deployment, tenant membership a základ permission policy hotový; bootstrap/session část R1 zůstává otevřená
+> Stav: deployment, tenant membership, permission policy a platform bootstrap hotové; audit action guardů a session část R1 zůstávají otevřené
 > Datum: 2026-09-01
 
 ## Hotovo
@@ -39,6 +39,10 @@
   pouze členy aktuální firmy; globální účet ani `/api/admin/users/*` neotevírají;
 - změna membershipu chrání vlastní účet a posledního aktivního ownera, audituje
   cílového uživatele a odvolá jeho existující session.
+- managed-only CLI `revizior-bootstrap-platform-admin.php` bezpečně založí právě
+  jednoho platform admina bez supplier membershipu, nepřijímá heslo v argumentu,
+  vyžaduje povinné MFA a každé úspěšné použití audituje; Linux a Windows mají
+  odpovídající wrapper.
 
 ## Konfigurace
 
@@ -60,7 +64,6 @@ Managed konfigurace bez absolutní HTTPS adresy failne při startu aplikace.
 
 - dokončení oddělení globální platform role od efektivní supplier role ve všech action guardech;
 - session version/revocation;
-- bezpečný platform bootstrap CLI a cross-platform wrapper;
 - SSO vstupní endpoint (v roadmapě spolu se service auth v R2).
 
 Dokud nejsou tyto body hotové, managed mode je integrační základ, ne produkční cutover gate.
@@ -84,8 +87,8 @@ z backend PHP kontejneru. Prohlížeč používá výchozí lokální port `8082
 
 ## Ověření slice
 
-- focused R1 PHPUnit: 41 testů / 219 assertions;
-- unit + architecture PHPUnit: 1 709 testů / 5 547 assertions, bez failure
+- focused R1 PHPUnit: 43 testů / 231 assertions;
+- unit + architecture PHPUnit: 1 711 testů / 5 559 assertions, bez failure
   (67 DB-dependent skipů, 1 existující deprecation);
 - focused PHPStan level 0: bez chyb;
 - frontend PWA testy: 64/64;
