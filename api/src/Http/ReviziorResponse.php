@@ -23,6 +23,11 @@ final class ReviziorResponse
         ], $status), $requestId);
     }
 
+    public static function noContent(Response $response, string $requestId): Response
+    {
+        return self::headers($response->withStatus(204), $requestId);
+    }
+
     /** @param array<string,string> $fields */
     public static function error(
         Response $response,

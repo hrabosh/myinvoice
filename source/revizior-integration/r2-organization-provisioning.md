@@ -70,5 +70,6 @@ Po dokončení endpointu provider inzeruje:
 
 ## Další krok
 
-Implementovat organization update a samostatný user upsert/revoke včetně revokace sessions a
-zvýšení `session_version`. `userProvisioning` zůstává do té doby vypnutý.
+Organization update a samostatný user upsert/revoke jsou implementované v navazujícím
+[`r2-tenant-synchronization.md`](r2-tenant-synchronization.md). `userProvisioning` zůstává
+vypnutý do consumer přechodu z obecného `organization:write` na dedicated `user:write` scope.

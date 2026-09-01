@@ -150,6 +150,68 @@ final class ReviziorServiceAuthMiddlewareTest extends TestCase
         self::assertSame('organization_subject_mismatch', $this->json($response)['error']['code']);
     }
 
+    public function testOrganizationUpdateRequiresMatchingTenantAndOrganizationWriteScope(): void
+    {
+        $identity = $this->tenantIdentity(['organization:write']);
+        $this->verifier->expects(self::once())->method('verify')->willReturn($identity);
+        $this->replay->expects(self::once())->method('consume')->with($identity);
+
+        $response = $this->middleware()->process(
+            $this->tenantRequest('PUT', '/organizations/30000000-0000-4000-8000-000000000001')
+                ->withHeader('Authorization', 'Bearer signed-token'),
+            $this->acceptingHandler(),
+        );
+        self::assertSame(204, $response->getStatusCode());
+    }
+
+    public function testOrganizationUpdateRejectsDifferentTenantSubject(): void
+    {
+        $identity = $this->tenantIdentity(['organization:write'], '30000000-0000-4000-8000-000000000099');
+        $this->verifier->expects(self::once())->method('verify')->willReturn($identity);
+        $this->replay->expects(self::never())->method('consume');
+
+        $response = $this->middleware()->process(
+            $this->tenantRequest('PUT', '/organizations/30000000-0000-4000-8000-000000000001')
+                ->withHeader('Authorization', 'Bearer signed-token'),
+            $this->failingHandler(),
+        );
+        self::assertSame(403, $response->getStatusCode());
+        self::assertSame('organization_subject_mismatch', $this->json($response)['error']['code']);
+    }
+
+    public function testUserSynchronizationRequiresDedicatedUserWriteScope(): void
+    {
+        $identity = $this->tenantIdentity(['organization:write']);
+        $this->verifier->expects(self::once())->method('verify')->willReturn($identity);
+        $this->replay->expects(self::never())->method('consume');
+
+        $response = $this->middleware()->process(
+            $this->tenantRequest(
+                'PUT',
+                '/organizations/30000000-0000-4000-8000-000000000001/users/20000000-0000-4000-8000-000000000001',
+            )->withHeader('Authorization', 'Bearer signed-token'),
+            $this->failingHandler(),
+        );
+        self::assertSame(403, $response->getStatusCode());
+        self::assertSame('service_scope_insufficient', $this->json($response)['error']['code']);
+    }
+
+    public function testUserRevokeAcceptsDedicatedScopeForMatchingTenant(): void
+    {
+        $identity = $this->tenantIdentity(['user:write']);
+        $this->verifier->expects(self::once())->method('verify')->willReturn($identity);
+        $this->replay->expects(self::once())->method('consume')->with($identity);
+
+        $response = $this->middleware()->process(
+            $this->tenantRequest(
+                'DELETE',
+                '/organizations/30000000-0000-4000-8000-000000000001/users/20000000-0000-4000-8000-000000000001',
+            )->withHeader('Authorization', 'Bearer signed-token'),
+            $this->acceptingHandler(),
+        );
+        self::assertSame(204, $response->getStatusCode());
+    }
+
     public function testStandaloneDeploymentHidesIntegrationNamespace(): void
     {
         $this->verifier->expects(self::never())->method('verify');
@@ -200,6 +262,13 @@ final class ReviziorServiceAuthMiddlewareTest extends TestCase
             ->withHeader(ReviziorServiceAuthMiddleware::REQUEST_ID_HEADER, self::REQUEST_ID);
     }
 
+    private function tenantRequest(string $method, string $path): ServerRequestInterface
+    {
+        return (new ServerRequestFactory())
+            ->createServerRequest($method, ReviziorServiceAuthMiddleware::PATH_PREFIX . $path)
+            ->withHeader(ReviziorServiceAuthMiddleware::REQUEST_ID_HEADER, self::REQUEST_ID);
+    }
+
     private function identity(array $scopes): ReviziorServiceIdentity
     {
         return new ReviziorServiceIdentity(
@@ -210,6 +279,31 @@ final class ReviziorServiceAuthMiddlewareTest extends TestCase
             $scopes,
             self::REQUEST_ID,
         );
+    }
+
+    /** @param list<string> $scopes */
+    private function tenantIdentity(
+        array $scopes,
+        string $subject = '30000000-0000-4000-8000-000000000001',
+    ): ReviziorServiceIdentity {
+        return new ReviziorServiceIdentity(
+            'https://app.revizior.cz',
+            $subject,
+            '20000000-0000-4000-8000-000000000001',
+            time() + 60,
+            $scopes,
+            self::REQUEST_ID,
+        );
+    }
+
+    private function acceptingHandler(): RequestHandlerInterface
+    {
+        return new class implements RequestHandlerInterface {
+            public function handle(ServerRequestInterface $request): ResponseInterface
+            {
+                return (new ResponseFactory())->createResponse(204);
+            }
+        };
     }
 
     private function failingHandler(): RequestHandlerInterface

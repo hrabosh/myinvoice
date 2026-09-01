@@ -122,15 +122,14 @@ final class ReviziorOrganizationProvisioner
 
             $userLink = $pdo->prepare(
                 'INSERT INTO revizior_user_links
-                    (organization_link_id, user_uuid, user_id, supplier_role, active,
+                    (organization_link_id, user_uuid, user_id, supplier_role, payload_hash, active,
                      source_updated_at, session_version, created_at, updated_at)
-                 VALUES (?, ?, ?, \'supplier_owner\', 1, ?, 1, UTC_TIMESTAMP(6), UTC_TIMESTAMP(6))'
+                 VALUES (?, ?, ?, \'supplier_owner\', NULL, 1, NULL, 1, UTC_TIMESTAMP(6), UTC_TIMESTAMP(6))'
             );
             $userLink->execute([
                 $organizationLinkId,
                 $owner['uuid'],
                 $userId,
-                $organization['sourceUpdatedAt'],
             ]);
 
             $this->activity->log(

@@ -34,4 +34,9 @@ final class ReviziorProvisioningException extends RuntimeException
     {
         return new self($code, 409, 'Požadavek je v konfliktu s existující vazbou.');
     }
+
+    public static function notFound(string $code): self
+    {
+        return new self($code, 404, 'Požadovaná integrační vazba neexistuje.');
+    }
 }

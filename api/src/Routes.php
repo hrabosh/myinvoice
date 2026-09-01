@@ -178,6 +178,8 @@ use MyInvoice\Action\System\OpenApiAction;
 use MyInvoice\Action\System\VersionAction;
 use MyInvoice\Action\Revizior\ReviziorCapabilitiesAction;
 use MyInvoice\Action\Revizior\ProvisionReviziorOrganizationAction;
+use MyInvoice\Action\Revizior\SyncReviziorOrganizationAction;
+use MyInvoice\Action\Revizior\SyncReviziorUserAction;
 use MyInvoice\Action\Admin\MyuctoUpgradeAction;
 use MyInvoice\Action\Admin\UpdateAction;
 use Slim\App;
@@ -192,6 +194,18 @@ final class Routes
         $app->post(
             '/api/integrations/revizior/v1/organizations/{organizationUuid}/provision',
             ProvisionReviziorOrganizationAction::class,
+        );
+        $app->put(
+            '/api/integrations/revizior/v1/organizations/{organizationUuid}',
+            SyncReviziorOrganizationAction::class,
+        );
+        $app->put(
+            '/api/integrations/revizior/v1/organizations/{organizationUuid}/users/{userUuid}',
+            [SyncReviziorUserAction::class, 'upsert'],
+        );
+        $app->delete(
+            '/api/integrations/revizior/v1/organizations/{organizationUuid}/users/{userUuid}',
+            [SyncReviziorUserAction::class, 'revoke'],
         );
 
         // Public REST API v1 — dokumentace

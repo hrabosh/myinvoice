@@ -3,7 +3,7 @@
   "info": {
     "title": "MyInvoice ReviziOR Integration API",
     "version": "1.0",
-    "description": "Versioned server-to-server and browser SSO contract. Service authentication, capabilities and atomic organization provisioning are implemented; other routes remain contractual until their capability is enabled.",
+    "description": "Versioned server-to-server and browser SSO contract. Service authentication, capabilities, atomic organization provisioning, organization synchronization and user membership endpoints are implemented. User provisioning remains capability-gated until the caller sends the dedicated user:write scope; downstream routes remain contractual until enabled.",
     "license": {"name": "MIT", "identifier": "MIT"}
   },
   "servers": [
@@ -55,6 +55,7 @@
       "put": {
         "operationId": "updateReviziorOrganization",
         "summary": "Update allowed live organization data",
+        "description": "Requires an organization subject matching organizationUuid and the organization:write scope. Stale sourceUpdatedAt snapshots are ignored.",
         "parameters": [
           {"$ref": "#/components/parameters/OrganizationUuid"},
           {"$ref": "#/components/parameters/RequestId"}
@@ -65,7 +66,8 @@
           "400": {"$ref": "#/components/responses/ValidationError"},
           "401": {"$ref": "#/components/responses/ServiceAuthError"},
           "403": {"$ref": "#/components/responses/ServiceScopeError"},
-          "404": {"$ref": "#/components/responses/NotFoundError"}
+          "404": {"$ref": "#/components/responses/NotFoundError"},
+          "503": {"description": "Provider cannot complete the transaction safely", "content": {"application/json": {"schema": {"$ref": "#/components/schemas/ErrorResponse"}}}}
         }
       }
     },
@@ -73,6 +75,7 @@
       "put": {
         "operationId": "upsertReviziorUser",
         "summary": "Upsert an authoritative supplier membership",
+        "description": "Requires an organization subject matching organizationUuid and the dedicated user:write scope. The global admin role can never be assigned by this endpoint.",
         "parameters": [
           {"$ref": "#/components/parameters/OrganizationUuid"},
           {"$ref": "#/components/parameters/UserUuid"},
@@ -85,12 +88,15 @@
           "400": {"$ref": "#/components/responses/ValidationError"},
           "401": {"$ref": "#/components/responses/ServiceAuthError"},
           "403": {"$ref": "#/components/responses/ServiceScopeError"},
-          "409": {"$ref": "#/components/responses/ConflictError"}
+          "404": {"$ref": "#/components/responses/NotFoundError"},
+          "409": {"$ref": "#/components/responses/ConflictError"},
+          "503": {"description": "Provider cannot complete the transaction safely", "content": {"application/json": {"schema": {"$ref": "#/components/schemas/ErrorResponse"}}}}
         }
       },
       "delete": {
         "operationId": "revokeReviziorUser",
         "summary": "Revoke a supplier membership without deleting history",
+        "description": "Requires an organization subject matching organizationUuid and the dedicated user:write scope. Repeated revoke of an already missing or inactive membership is a successful no-op.",
         "parameters": [
           {"$ref": "#/components/parameters/OrganizationUuid"},
           {"$ref": "#/components/parameters/UserUuid"},
@@ -100,7 +106,8 @@
           "204": {"description": "Membership revoked"},
           "401": {"$ref": "#/components/responses/ServiceAuthError"},
           "403": {"$ref": "#/components/responses/ServiceScopeError"},
-          "404": {"$ref": "#/components/responses/NotFoundError"}
+          "404": {"$ref": "#/components/responses/NotFoundError"},
+          "503": {"description": "Provider cannot complete the transaction safely", "content": {"application/json": {"schema": {"$ref": "#/components/schemas/ErrorResponse"}}}}
         }
       }
     },
@@ -372,8 +379,8 @@
         "properties": {
           "specVersion": {"$ref": "#/components/schemas/ContractVersion"},
           "userUuid": {"$ref": "#/components/schemas/Uuid"},
-          "email": {"type": "string", "format": "email"},
-          "name": {"type": "string", "minLength": 1},
+          "email": {"type": "string", "format": "email", "maxLength": 190},
+          "name": {"type": "string", "minLength": 1, "maxLength": 120},
           "role": {"$ref": "#/components/schemas/SupplierRole"},
           "active": {"type": "boolean"},
           "sourceUpdatedAt": {"$ref": "#/components/schemas/DateTime"}
@@ -381,10 +388,20 @@
       },
       "UserLinkResponse": {
         "type": "object",
+        "additionalProperties": false,
         "required": ["specVersion", "data", "meta"],
         "properties": {
           "specVersion": {"$ref": "#/components/schemas/ContractVersion"},
-          "data": {"type": "object"},
+          "data": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["externalUserId", "role", "active"],
+            "properties": {
+              "externalUserId": {"type": "string", "pattern": "^[1-9][0-9]*$"},
+              "role": {"$ref": "#/components/schemas/SupplierRole"},
+              "active": {"type": "boolean"}
+            }
+          },
           "meta": {"$ref": "#/components/schemas/ResponseMeta"}
         }
       },

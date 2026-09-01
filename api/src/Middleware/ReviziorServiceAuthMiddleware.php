@@ -117,7 +117,34 @@ final class ReviziorServiceAuthMiddleware implements MiddlewareInterface
             return;
         }
 
+        $organizationPattern = '#^' . preg_quote(self::PATH_PREFIX, '#') . '/organizations/([^/]+)$#D';
+        if ($request->getMethod() === 'PUT' && preg_match($organizationPattern, $path, $matches) === 1) {
+            $this->authorizeOrganizationRequest($identity, 'organization:write', (string) $matches[1]);
+            return;
+        }
+
+        $userPattern = '#^' . preg_quote(self::PATH_PREFIX, '#') . '/organizations/([^/]+)/users/[^/]+$#D';
+        if (in_array($request->getMethod(), ['PUT', 'DELETE'], true)
+            && preg_match($userPattern, $path, $matches) === 1
+        ) {
+            $this->authorizeOrganizationRequest($identity, 'user:write', (string) $matches[1]);
+            return;
+        }
+
         throw ReviziorServiceAuthException::forbidden('service_scope_insufficient');
+    }
+
+    private function authorizeOrganizationRequest(
+        ReviziorServiceIdentity $identity,
+        string $scope,
+        string $organizationUuid,
+    ): void {
+        if (!$identity->hasScope($scope)) {
+            throw ReviziorServiceAuthException::forbidden('service_scope_insufficient');
+        }
+        if (strtolower($identity->subject) !== strtolower($organizationUuid)) {
+            throw ReviziorServiceAuthException::forbidden('organization_subject_mismatch');
+        }
     }
 
     private function endpointFamily(string $path): string
@@ -125,6 +152,12 @@ final class ReviziorServiceAuthMiddleware implements MiddlewareInterface
         if ($path === self::PATH_PREFIX . '/capabilities') return '/capabilities';
         if (preg_match('#^' . preg_quote(self::PATH_PREFIX, '#') . '/organizations/[^/]+/provision$#D', $path) === 1) {
             return '/organizations/{organizationUuid}/provision';
+        }
+        if (preg_match('#^' . preg_quote(self::PATH_PREFIX, '#') . '/organizations/[^/]+/users/[^/]+$#D', $path) === 1) {
+            return '/organizations/{organizationUuid}/users/{userUuid}';
+        }
+        if (preg_match('#^' . preg_quote(self::PATH_PREFIX, '#') . '/organizations/[^/]+$#D', $path) === 1) {
+            return '/organizations/{organizationUuid}';
         }
         return '/unsupported';
     }

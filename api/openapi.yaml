@@ -203,6 +203,157 @@ paths:
             application/json:
               schema: { $ref: '#/components/schemas/ReviziorErrorResponse' }
 
+  /api/integrations/revizior/v1/organizations/{organizationUuid}:
+    put:
+      tags: [ReviziOR service]
+      summary: Synchronizuje živé údaje organizace
+      description: |
+        Vyžaduje tenantový subject shodný s `organizationUuid` a scope
+        `organization:write`. Mění pouze aktuální supplier nastavení; snapshoty
+        historických dokladů zůstávají beze změny. Starší `sourceUpdatedAt` je no-op.
+      security:
+        - ReviziorServiceAssertion: []
+      parameters:
+        - $ref: '#/components/parameters/ReviziorOrganizationUuid'
+        - $ref: '#/components/parameters/ReviziorRequestIdHeader'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ReviziorOrganizationUpdateRequest' }
+      responses:
+        '200':
+          description: Aktuální stav organization linku a supplieru.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ReviziorProvisionResponse' }
+        '400':
+          description: Neplatný payload.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ReviziorErrorResponse' }
+        '401':
+          description: Service assertion chybí nebo není platný.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ReviziorErrorResponse' }
+        '403':
+          description: Scope nebo tenant subject operaci nepovoluje.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ReviziorErrorResponse' }
+        '404':
+          description: Organizace ještě nebyla provisionována.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ReviziorErrorResponse' }
+        '503':
+          description: Provider nemůže synchronizaci bezpečně dokončit.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ReviziorErrorResponse' }
+
+  /api/integrations/revizior/v1/organizations/{organizationUuid}/users/{userUuid}:
+    put:
+      tags: [ReviziOR service]
+      summary: Synchronizuje authoritative tenantové členství uživatele
+      description: |
+        Vyžaduje tenantový subject shodný s `organizationUuid` a samostatný scope
+        `user:write`. Externí UUID je primární identita; globální role `admin`
+        se nikdy nemění a kolize identity končí 409.
+      security:
+        - ReviziorServiceAssertion: []
+      parameters:
+        - $ref: '#/components/parameters/ReviziorOrganizationUuid'
+        - $ref: '#/components/parameters/ReviziorUserUuid'
+        - $ref: '#/components/parameters/ReviziorRequestIdHeader'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ReviziorUserUpsertRequest' }
+      responses:
+        '200':
+          description: Existující členství bylo aktualizováno nebo zůstalo beze změny.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ReviziorUserLinkResponse' }
+        '201':
+          description: Nová external user vazba byla vytvořena.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ReviziorUserLinkResponse' }
+        '400':
+          description: Neplatný payload.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ReviziorErrorResponse' }
+        '401':
+          description: Service assertion chybí nebo není platný.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ReviziorErrorResponse' }
+        '403':
+          description: Scope nebo tenant subject operaci nepovoluje.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ReviziorErrorResponse' }
+        '404':
+          description: Organizace ještě nebyla provisionována.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ReviziorErrorResponse' }
+        '409':
+          description: Externí UUID nebo e-mail koliduje s jinou identitou.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ReviziorErrorResponse' }
+        '503':
+          description: Provider nemůže synchronizaci bezpečně dokončit.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ReviziorErrorResponse' }
+    delete:
+      tags: [ReviziOR service]
+      summary: Revokuje tenantové členství bez mazání historie
+      description: |
+        Vyžaduje scope `user:write`. Odstraní membership, označí external link
+        neaktivní a zvýší `session_version`. Opakovaná revokace je úspěšný no-op.
+      security:
+        - ReviziorServiceAssertion: []
+      parameters:
+        - $ref: '#/components/parameters/ReviziorOrganizationUuid'
+        - $ref: '#/components/parameters/ReviziorUserUuid'
+        - $ref: '#/components/parameters/ReviziorRequestIdHeader'
+      responses:
+        '204':
+          description: Členství je revokované.
+        '400':
+          description: UUID v cestě nejsou platná.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ReviziorErrorResponse' }
+        '401':
+          description: Service assertion chybí nebo není platný.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ReviziorErrorResponse' }
+        '403':
+          description: Scope nebo tenant subject operaci nepovoluje.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ReviziorErrorResponse' }
+        '404':
+          description: Organizace ještě nebyla provisionována.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ReviziorErrorResponse' }
+        '503':
+          description: Provider nemůže revokaci bezpečně dokončit.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ReviziorErrorResponse' }
+
   /api/v1/branding-profiles:
     parameters:
       - $ref: '#/components/parameters/SupplierIdHeader'
@@ -5505,6 +5656,11 @@ components:
       name: organizationUuid
       required: true
       schema: { type: string, format: uuid }
+    ReviziorUserUuid:
+      in: path
+      name: userUuid
+      required: true
+      schema: { type: string, format: uuid }
     SupplierIdHeader:
       in: header
       name: X-Supplier-Id
@@ -5597,10 +5753,64 @@ components:
           properties:
             organizationUuid: { type: string, format: uuid }
             supplierId: { type: string, pattern: '^[1-9][0-9]*$' }
-            status: { type: string, const: onboarding }
-            onboardingState: { type: string, const: incomplete }
+            status: { type: string, enum: [onboarding, active, suspended, disconnected] }
+            onboardingState: { type: string, enum: [incomplete, completed, blocked] }
             configurePath: { type: string, const: /settings/supplier }
             payloadHash: { type: string, pattern: '^sha256:[0-9a-f]{64}$' }
+        meta: { $ref: '#/components/schemas/ReviziorResponseMeta' }
+    ReviziorOrganizationUpdateRequest:
+      type: object
+      additionalProperties: false
+      required: [specVersion, organization]
+      properties:
+        specVersion: { type: string, const: "1.0" }
+        organization:
+          type: object
+          additionalProperties: false
+          required: [name, registrationNumber, vatNumber, vatStatus, address, language, active, sourceUpdatedAt]
+          properties:
+            name: { type: string, minLength: 1, maxLength: 190 }
+            registrationNumber: { type: [string, 'null'], maxLength: 20 }
+            vatNumber: { type: [string, 'null'], maxLength: 20 }
+            vatStatus: { type: [string, 'null'], enum: [payer, non_payer, identified_person, null] }
+            address:
+              type: object
+              additionalProperties: false
+              required: [street, city, postalCode, countryCode]
+              properties:
+                street: { type: string, minLength: 1, maxLength: 190 }
+                city: { type: string, minLength: 1, maxLength: 120 }
+                postalCode: { type: string, minLength: 1, maxLength: 10 }
+                countryCode: { type: string, pattern: '^[A-Z]{2}$' }
+            language: { type: string, enum: [cs, en] }
+            active: { type: boolean }
+            sourceUpdatedAt: { type: string, format: date-time }
+    ReviziorUserUpsertRequest:
+      type: object
+      additionalProperties: false
+      required: [specVersion, userUuid, email, name, role, active, sourceUpdatedAt]
+      properties:
+        specVersion: { type: string, const: "1.0" }
+        userUuid: { type: string, format: uuid }
+        email: { type: string, format: email, maxLength: 190 }
+        name: { type: string, minLength: 1, maxLength: 120 }
+        role: { type: string, enum: [supplier_owner, accountant, readonly] }
+        active: { type: boolean }
+        sourceUpdatedAt: { type: string, format: date-time }
+    ReviziorUserLinkResponse:
+      type: object
+      additionalProperties: false
+      required: [specVersion, data, meta]
+      properties:
+        specVersion: { type: string, const: "1.0" }
+        data:
+          type: object
+          additionalProperties: false
+          required: [externalUserId, role, active]
+          properties:
+            externalUserId: { type: string, pattern: '^[1-9][0-9]*$' }
+            role: { type: string, enum: [supplier_owner, accountant, readonly] }
+            active: { type: boolean }
         meta: { $ref: '#/components/schemas/ReviziorResponseMeta' }
     ReviziorCapabilitiesResponse:
       type: object

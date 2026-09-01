@@ -20,6 +20,8 @@ final class ReviziorCapabilitiesAction
             // původní MyInvoice domény. R2 je bude zapínat po jednotlivých slice.
             'features' => [
                 'organizationProvisioning' => true,
+                // Provider endpoint je hotový, consumer ale ještě posílá
+                // organization:write místo kontraktního user:write.
                 'userProvisioning' => false,
                 'clientUpsert' => false,
                 'priceResolution' => false,

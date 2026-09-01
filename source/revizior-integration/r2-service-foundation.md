@@ -1,6 +1,6 @@
 # R2 service foundation — implementovaný bezpečnostní základ
 
-> Stav: service assertion, replay store a fail-closed capabilities probe hotové; organization provisioning navazuje samostatným dokončeným slice
+> Stav: service assertion, replay store, capabilities probe, organization provisioning a tenant synchronization provideru hotové
 > Datum: 2026-09-01
 
 ## Hotovo
@@ -43,14 +43,16 @@ odstraněna po úspěšném cross-repo handshake testu.
 
 ## Další slice R2
 
-1. organization update a user upsert/revoke se zvýšením `session_version`;
-2. migration integrační testy pro clean DB, upgrade a souběh;
-3. SSO ticket s odděleným audience a signing key;
-4. capability `userProvisioning`/`sso` zapnout jednotlivě až po
+1. doplnit v consumeru dedicated `user:write` scope a dokončit cross-repo membership smoke;
+2. zapnout `userProvisioning` a spustit consumer backfill;
+3. migration integrační testy pro clean DB, upgrade a souběh;
+4. SSO ticket s odděleným audience a signing key;
+5. capability `sso` zapnout až po
    zeleném cross-repo smoke testu.
 
-Organization provisioning je dostupný. Backend stále nesmí považovat obecnou synchronizaci
-uživatelů, SSO ani fakturaci za dostupnou, dokud je provider neinzeruje v capabilities.
+Organization provisioning je dostupný a organization update je implementovaný. User endpointy
+jsou hotové s kanonickým `user:write`, ale backend je stále nesmí používat, dokud provider po
+consumer scope opravě neinzeruje `userProvisioning`. SSO ani fakturace zatím dostupné nejsou.
 
 ## Ověření slice
 
