@@ -28,6 +28,13 @@ return [
         'revizior' => [
             'app_url' => null,                        // managed only: trusted HTTPS target for "Back to ReviziOR"
             'allowed_return_hosts' => [],             // optional exact host allowlist, e.g. ['app.revizior.cz']
+            'service_auth' => [
+                'issuer' => null,                     // exact ReviziOR issuer, e.g. https://app.revizior.cz
+                'audience' => null,                   // exact provider API audience ending in /api/integrations/revizior/v1
+                'key_id' => null,                     // expected kid; algorithm is fixed to RS256
+                'public_key_path' => null,            // ReviziOR service assertion public PEM
+                'clock_skew_seconds' => 5,            // 0–30 seconds
+            ],
         ],
     ],
     'app' => [

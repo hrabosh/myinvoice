@@ -30,6 +30,7 @@
         "symfony/uid": "^8.0",
         "twig/twig": "^3.10",
         "web-auth/webauthn-lib": "^5.3",
+        "web-token/jwt-framework": "^4.2.2",
         "webklex/php-imap": "^6.2"
     },
     "require-dev": {

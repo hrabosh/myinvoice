@@ -176,6 +176,7 @@ use MyInvoice\Action\Document\DocumentJobsAction;
 use MyInvoice\Action\System\HealthAction;
 use MyInvoice\Action\System\OpenApiAction;
 use MyInvoice\Action\System\VersionAction;
+use MyInvoice\Action\Revizior\ReviziorCapabilitiesAction;
 use MyInvoice\Action\Admin\MyuctoUpgradeAction;
 use MyInvoice\Action\Admin\UpdateAction;
 use Slim\App;
@@ -186,6 +187,7 @@ final class Routes
     {
         $app->get('/api/health',  HealthAction::class);
         $app->get('/api/version', VersionAction::class);
+        $app->get('/api/integrations/revizior/v1/capabilities', ReviziorCapabilitiesAction::class);
 
         // Public REST API v1 — dokumentace
         $app->get('/api/openapi.yaml', [OpenApiAction::class, 'spec']);

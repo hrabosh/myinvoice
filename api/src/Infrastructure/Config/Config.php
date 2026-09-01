@@ -210,6 +210,13 @@ final class Config
                 'revizior' => [
                     'app_url' => null,
                     'allowed_return_hosts' => [],
+                    'service_auth' => [
+                        'issuer' => null,
+                        'audience' => null,
+                        'key_id' => null,
+                        'public_key_path' => null,
+                        'clock_skew_seconds' => 5,
+                    ],
                 ],
             ],
             'session' => [
@@ -269,6 +276,11 @@ final class Config
             'MYINVOICE_PUBLIC_NAME' => ['deployment.public_name', 'string'],
             'MYINVOICE_REVIZIOR_APP_URL' => ['deployment.revizior.app_url', 'string'],
             'MYINVOICE_REVIZIOR_ALLOWED_RETURN_HOSTS' => ['deployment.revizior.allowed_return_hosts', 'csv'],
+            'MYINVOICE_REVIZIOR_SERVICE_ISSUER' => ['deployment.revizior.service_auth.issuer', 'string'],
+            'MYINVOICE_REVIZIOR_SERVICE_AUDIENCE' => ['deployment.revizior.service_auth.audience', 'string'],
+            'MYINVOICE_REVIZIOR_SERVICE_KEY_ID' => ['deployment.revizior.service_auth.key_id', 'string'],
+            'MYINVOICE_REVIZIOR_SERVICE_PUBLIC_KEY' => ['deployment.revizior.service_auth.public_key_path', 'string'],
+            'MYINVOICE_REVIZIOR_SERVICE_CLOCK_SKEW' => ['deployment.revizior.service_auth.clock_skew_seconds', 'int'],
 
             // Database (jednotlivé klíče i kompozitní DATABASE_URL)
             'MYINVOICE_DB_HOST'    => ['db.host', 'string'],
@@ -456,6 +468,7 @@ final class Config
         'smtp.dkim.private_key_path',
         'smtp.dkim.public_key_path',
         'smtp.dkim.dns_doc_path',
+        'deployment.revizior.service_auth.public_key_path',
     ];
 
     private static function anchorRelativePaths(array $data, string $rootDir): array

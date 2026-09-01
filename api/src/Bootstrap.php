@@ -19,6 +19,7 @@ use MyInvoice\Middleware\IpAllowlistMiddleware;
 use MyInvoice\Middleware\ManagedModeGuardMiddleware;
 use MyInvoice\Middleware\RateLimitMiddleware;
 use MyInvoice\Middleware\RequireMfaMiddleware;
+use MyInvoice\Middleware\ReviziorServiceAuthMiddleware;
 use MyInvoice\Middleware\RoleMiddleware;
 use MyInvoice\Middleware\SessionLockMiddleware;
 use MyInvoice\Middleware\SupplierScopeMiddleware;
@@ -189,7 +190,7 @@ final class Bootstrap
 
         // Slim 4 LIFO: poslední `add()` = NEJVĚTŠÍ vrstva = běží JAKO PRVNÍ.
         // Cílový order běhu (outside → inside):
-        //   IpAllowlist → FirstRunLock → Auth → SessionLock → RequireMfa → Role → SupplierScope → ApiScope → RateLimit → CSRF → WebAuthnBodyLimit → Routing → BodyParsing → Action
+        //   IpAllowlist → ManagedModeGuard → ReviziorServiceAuth → FirstRunLock → Auth → SessionLock → RequireMfa → Role → SupplierScope → ApiScope → RateLimit → CSRF → WebAuthnBodyLimit → Routing → BodyParsing → Action
         // → add() v opačném pořadí (innermost první):
         $app->addBodyParsingMiddleware();                            // innermost
         $app->addRoutingMiddleware();
@@ -203,6 +204,7 @@ final class Bootstrap
         $app->add($container->get(SessionLockMiddleware::class));    // autoritativní idle/manual lock browser session
         $app->add($container->get(AuthMiddleware::class));           // načte session nebo bearer token
         $app->add($container->get(FirstRunLockMiddleware::class));   // 423 pokud users prázdná
+        $app->add($container->get(ReviziorServiceAuthMiddleware::class)); // oddělený service assertion, nikdy PAT/session
         $app->add($container->get(ManagedModeGuardMiddleware::class)); // managed feature/API denylist
         $app->add($container->get(IpAllowlistMiddleware::class));    // outermost user mw
         $app->add(new ApiVersionRewriteMiddleware());                // /api/v1/* → /api/* před vším ostatním

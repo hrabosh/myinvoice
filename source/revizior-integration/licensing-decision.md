@@ -58,9 +58,12 @@ Pro R2 je schválena knihovna `web-token/jwt-framework`, nikoli vlastní kryptog
   Composer audit musí zůstat zelený;
 - povolený algoritmus se váže na nakonfigurovaný `kid`; nesmí se přijmout z nechráněného headeru
   ani obecného seznamu algoritmů.
+- consumer service assertion je implementovaný jako RS256; provider proto povoluje výhradně
+  RS256 a neprovádí algoritm negotiation.
 
-Dependency se v R0 záměrně nepřidává: žádný runtime verifier/signer ještě neexistuje. Přidání a
-integrační security testy jsou atomický úkol R2.
+R2 foundation dependency přidává jako `^4.2.2` současně s explicitním RS256 verifierem,
+security testy a perzistentní replay ochranou. `composer audit --locked` po aktualizaci
+nehlásí žádnou známou advisory.
 
 ## Gate do produkce
 

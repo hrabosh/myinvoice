@@ -3,7 +3,7 @@
   "info": {
     "title": "MyInvoice ReviziOR Integration API",
     "version": "1.0",
-    "description": "Versioned server-to-server and browser SSO contract. R0 publishes this contract without registering runtime routes.",
+    "description": "Versioned server-to-server and browser SSO contract. The capabilities route and fail-closed service authentication are implemented; other routes remain contractual until their capability is enabled.",
     "license": {"name": "MIT", "identifier": "MIT"}
   },
   "servers": [
@@ -17,13 +17,16 @@
       "get": {
         "operationId": "reviziorCapabilities",
         "summary": "Read provider capabilities",
+        "description": "Requires platform subject and capabilities:read. During consumer migration, organization:provision is accepted only for this read-only probe.",
         "parameters": [
           {"$ref": "#/components/parameters/RequestId"}
         ],
         "responses": {
           "200": {"description": "Capabilities", "content": {"application/json": {"schema": {"$ref": "#/components/schemas/CapabilitiesResponse"}}}},
           "401": {"$ref": "#/components/responses/ServiceAuthError"},
-          "403": {"$ref": "#/components/responses/ServiceScopeError"}
+          "403": {"$ref": "#/components/responses/ServiceScopeError"},
+          "404": {"description": "Managed integration is disabled", "content": {"application/json": {"schema": {"$ref": "#/components/schemas/ErrorResponse"}}}},
+          "503": {"description": "Service authentication or replay store is not ready", "content": {"application/json": {"schema": {"$ref": "#/components/schemas/ErrorResponse"}}}}
         }
       }
     },
@@ -245,7 +248,7 @@
         "type": "http",
         "scheme": "bearer",
         "bearerFormat": "JWT",
-        "description": "Short-lived PS256 service assertion; not a MyInvoice PAT."
+        "description": "Short-lived RS256 service assertion with configured kid; not a MyInvoice PAT."
       }
     },
     "parameters": {

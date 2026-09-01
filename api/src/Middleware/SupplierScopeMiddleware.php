@@ -41,6 +41,10 @@ final class SupplierScopeMiddleware implements MiddlewareInterface
 
     public function process(Request $request, Handler $handler): Response
     {
+        if ($request->getAttribute(ReviziorServiceAuthMiddleware::ATTR_IDENTITY) !== null) {
+            return $handler->handle($request);
+        }
+
         $path = $request->getUri()->getPath();
         if (str_starts_with($path, '/api/auth/webauthn/')
             || str_starts_with($path, '/api/auth/mfa/')

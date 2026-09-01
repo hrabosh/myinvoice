@@ -103,8 +103,50 @@ tags:
     description: Daňový optimalizátor (srovnání režimů, predikce ročních limitů)
   - name: Logbook
     description: Kniha jízd — vozidla, jízdy, tankování a daňové souhrny
+  - name: ReviziOR service
+    description: Server-to-server API managed deploymentu; nepřijímá Personal Access Token.
 
 paths:
+  /api/integrations/revizior/v1/capabilities:
+    get:
+      tags: [ReviziOR service]
+      summary: Schopnosti managed fakturačního provideru
+      description: |
+        Fail-closed service endpoint. Vyžaduje krátkodobý RS256 assertion s exact
+        issuer/audience, nakonfigurovaným `kid`, unikátním `jti`, shodným
+        `request_id` a scope `capabilities:read`. Po dobu přechodu přijímá pro
+        tento read-only probe také silnější `organization:provision` scope.
+      security:
+        - ReviziorServiceAssertion: []
+      parameters:
+        - $ref: '#/components/parameters/ReviziorRequestIdHeader'
+      responses:
+        '200':
+          description: Aktuální, skutečně dostupné schopnosti provideru.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ReviziorCapabilitiesResponse' }
+        '401':
+          description: Assertion chybí, je neplatný, expirovaný nebo znovu použitý.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ReviziorErrorResponse' }
+        '403':
+          description: Scope nebo platformní subject operaci nepovoluje.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ReviziorErrorResponse' }
+        '404':
+          description: Deployment není v managed režimu.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ReviziorErrorResponse' }
+        '503':
+          description: Service auth nebo jeho perzistentní replay store nejsou připravené.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ReviziorErrorResponse' }
+
   /api/v1/branding-profiles:
     parameters:
       - $ref: '#/components/parameters/SupplierIdHeader'
@@ -5384,8 +5426,19 @@ components:
       scheme: bearer
       bearerFormat: mi_pat_
       description: Personal Access Token získaný v Nastavení → API tokeny.
+    ReviziorServiceAssertion:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: Krátkodobý, jednorázový RS256 service assertion; není to PAT ani browser session.
 
   parameters:
+    ReviziorRequestIdHeader:
+      in: header
+      name: X-Request-Id
+      required: true
+      description: UUID shodné s chráněným claimem `request_id` v assertionu.
+      schema: { type: string, format: uuid }
     SupplierIdHeader:
       in: header
       name: X-Supplier-Id
@@ -5428,6 +5481,60 @@ components:
           schema: { $ref: '#/components/schemas/Error' }
 
   schemas:
+    ReviziorCapabilitiesResponse:
+      type: object
+      required: [specVersion, data, meta]
+      properties:
+        specVersion: { type: string, const: "1.0" }
+        data:
+          type: object
+          required: [contractVersion, deploymentMode, features, limits]
+          properties:
+            contractVersion: { type: string, const: "1.0" }
+            deploymentMode: { type: string, const: revizior_managed }
+            features:
+              type: object
+              required: [organizationProvisioning, userProvisioning, clientUpsert, priceResolution, invoiceDraft, attachments, sso, proforma, creditNote, partialPayments, eventOutbox]
+              properties:
+                organizationProvisioning: { type: boolean }
+                userProvisioning: { type: boolean }
+                clientUpsert: { type: boolean }
+                priceResolution: { type: boolean }
+                invoiceDraft: { type: boolean }
+                attachments: { type: boolean }
+                sso: { type: boolean }
+                proforma: { type: boolean }
+                creditNote: { type: boolean }
+                partialPayments: { type: boolean }
+                eventOutbox: { type: boolean }
+            limits:
+              type: object
+              required: [maxItemsPerInvoice, maxAttachmentBytes, maxRequestBytes]
+              properties:
+                maxItemsPerInvoice: { type: integer }
+                maxAttachmentBytes: { type: integer }
+                maxRequestBytes: { type: integer }
+        meta: { $ref: '#/components/schemas/ReviziorResponseMeta' }
+    ReviziorErrorResponse:
+      type: object
+      required: [specVersion, error, meta]
+      properties:
+        specVersion: { type: string, const: "1.0" }
+        error:
+          type: object
+          required: [code, message, fields, retryable]
+          properties:
+            code: { type: string }
+            message: { type: string }
+            fields: { type: object, additionalProperties: true }
+            retryable: { type: boolean }
+        meta: { $ref: '#/components/schemas/ReviziorResponseMeta' }
+    ReviziorResponseMeta:
+      type: object
+      required: [contractVersion, requestId]
+      properties:
+        contractVersion: { type: string, const: "1.0" }
+        requestId: { type: string, format: uuid }
     OssPreview:
       type: object
       required: [period, settings, state, summary, countries, corrections, warnings]
