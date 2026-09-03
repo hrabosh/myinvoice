@@ -16,34 +16,57 @@ use PHPUnit\Framework\TestCase;
  */
 final class ReviziorSharedFlowCharacterizationTest extends TestCase
 {
-    public function testClientActionsKeepValidationContactsAuditAndSupplierGuard(): void
+    /**
+     * R3: klientský tok je vytažený do sdíleného `ClientWriter`. Actions jsou
+     * jen mapování HTTP → služba → JSON; pořadí kroků hlídá služba.
+     */
+    public function testClientActionsDelegateToSharedWriterAndKeepGuards(): void
     {
         $create = self::source('Action/Client/CreateClientAction.php');
         self::assertOrderedSubstrings($create, [
             'SupplierScopeMiddleware::ATTR_CURRENT_ID',
-            'Validation::client($body)',
-            '$this->repo->create($body, $supplierId)',
-            '$this->emailContacts->replaceForClient(',
-            '$this->logger->log(\'client.created\'',
+            '$this->writer->create($supplierId, $body, $actor)',
         ]);
+        self::assertStringNotContainsString('Validation::client(', $create);
 
         $update = self::source('Action/Client/UpdateClientAction.php');
         self::assertOrderedSubstrings($update, [
             'SupplierGuard::owns(',
-            'Validation::client($body)',
-            '$this->repo->update($id, $body)',
-            '$this->emailContacts->replaceForClient(',
-            '$this->logger->log(\'client.updated\'',
+            '$this->writer->update($id, $supplierId, $body, $actor)',
+        ]);
+        self::assertStringNotContainsString('Validation::client(', $update);
+
+        $writer = self::source('Service/Client/ClientWriter.php');
+        self::assertStringContainsString('Validation::client($body)', $writer);
+        self::assertStringContainsString('$this->emailContacts->replaceForClient(', $writer);
+        self::assertOrderedSubstrings($writer, [
+            '$this->validate($body, $allowIncompleteAddress)',
+            '$this->repo->create($body, $supplierId)',
+            '$this->replaceContacts($id, $supplierId, $body)',
+            '\'client.created\',',
+            '$this->validate($body, $allowIncompleteAddress)',
+            '$this->repo->update($clientId, $body)',
+            '$this->replaceContacts($clientId, $supplierId, $body)',
+            '\'client.updated\',',
         ]);
     }
 
-    public function testInvoiceDraftActionKeepsSharedBusinessFlowInOrder(): void
+    /**
+     * R3: tok konceptu je vytažený do sdíleného `InvoiceDraftCreator`. Action je
+     * jen mapování HTTP → služba → JSON; pořadí kroků hlídá služba.
+     */
+    public function testInvoiceDraftActionDelegatesToSharedCreatorWhichKeepsBusinessFlowInOrder(): void
     {
-        $source = self::source('Action/Invoice/CreateInvoiceAction.php');
+        $action = self::source('Action/Invoice/CreateInvoiceAction.php');
+        self::assertStringContainsString('$this->creator->create(SupplierGuard::currentId($request), $body, $actor)', $action);
+        self::assertStringNotContainsString('InvoiceValidation::invoice(', $action);
+        self::assertStringNotContainsString('createDraft(', $action);
+
+        $source = self::source('Service/Invoice/InvoiceDraftCreator.php');
         self::assertOrderedSubstrings($source, [
             '$this->defaults->resolve($body)',
             'InvoiceValidation::invoice(',
-            'SupplierGuard::owns(',
+            '$this->clients->find((int) $body[\'client_id\'])',
             '$this->applyVatClassificationDefaults(',
             '$this->repo->createDraft($body, $userId)',
             '$this->repo->replaceItems(',
