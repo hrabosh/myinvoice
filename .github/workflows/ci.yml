@@ -243,6 +243,14 @@ jobs:
             echo "→ Reload PHP-FPM…"
             sudo /bin/systemctl reload php8.5-fpm
 
+            echo "→ Smoke test…"
+            HEALTH=$(curl -sf --max-time 10 https://fakturace.revizior.cz/api/health || true)
+            echo "$HEALTH" | grep -q '"db":true' || { echo "✗ /api/health neodpovídá zdravě: $HEALTH"; exit 1; }
+            CAPS=$(curl -s -o /dev/null -w '%{http_code}' --max-time 10 \
+              https://fakturace.revizior.cz/api/integrations/revizior/v1/capabilities)
+            [ "$CAPS" = "401" ] || { echo "✗ capabilities bez podpisu vrátilo $CAPS, čekáno 401"; exit 1; }
+            echo "✓ health ok, service API vyžaduje podpis"
+
             echo "→ Úklid starých release (ponechá poslední 3)…"
             ls -1dt "$BASE"/releases/* | tail -n +4 | xargs -r rm -rf
 
