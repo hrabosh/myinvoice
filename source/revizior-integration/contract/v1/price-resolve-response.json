@@ -1,0 +1,26 @@
+{
+  "specVersion": "1.0",
+  "data": {
+    "items": [
+      {
+        "lineKey": "50000000-0000-4000-8000-000000000001",
+        "code": "REV_ELEKTRO_ZAKLAD",
+        "priceListItemId": "55",
+        "description": "Pravidelná revize elektroinstalace",
+        "unit": "ks",
+        "quantity": "1.000",
+        "unitPrice": "4500.00",
+        "currency": "CZK",
+        "pricesIncludeVat": false,
+        "vatRate": "21.00",
+        "source": "customer_override",
+        "effectiveAt": "2026-08-30",
+        "error": null
+      }
+    ]
+  },
+  "meta": {
+    "contractVersion": "1.0",
+    "requestId": "10000000-0000-4000-8000-000000000004"
+  }
+}

@@ -22,6 +22,39 @@
  */
 
 return [
+    'deployment' => [
+        'mode' => 'standalone',                       // 'standalone' | 'revizior_managed'
+        'public_name' => 'MyInvoice.cz',              // user-visible product name; internal identifiers stay MyInvoice
+        'revizior' => [
+            'app_url' => null,                        // managed only: trusted HTTPS target for "Back to ReviziOR"
+            'allowed_return_hosts' => [],             // optional exact host allowlist, e.g. ['app.revizior.cz']
+            'service_auth' => [
+                'issuer' => null,                     // exact ReviziOR issuer, e.g. https://app.revizior.cz
+                'audience' => null,                   // exact provider API audience ending in /api/integrations/revizior/v1
+                'key_id' => null,                     // expected kid; algorithm is fixed to RS256
+                'public_key_path' => null,            // ReviziOR service assertion public PEM
+                'public_keys' => [],                  // rotation overlap: ['kid' => '/path/to.pem', …]; both old and new key accepted
+                'clock_skew_seconds' => 5,            // 0–30 seconds
+            ],
+            'sso' => [
+                'audience' => null,                   // exact browser SSO audience, e.g. https://fakturace.revizior.cz/api/auth/revizior/sso
+                'key_id' => null,                     // separate SSO signing kid; empty = reuse service key (audience stays separate)
+                'public_key_path' => null,            // ReviziOR SSO public PEM; empty = reuse service public key
+                'public_keys' => [],                  // rotation overlap, same shape as service_auth.public_keys
+            ],
+            // Local development only: allows http return URLs on loopback hosts.
+            // Ignored when app.env is 'production'.
+            'allow_insecure_return' => false,
+            'insecure_return_ports' => [],            // e.g. [8090] for a dev consumer on http://localhost:8090
+            'callback' => [
+                'url' => null,                        // ReviziOR event webhook, e.g. https://app.revizior.cz/api/internal/v1/invoicing/events
+                'key_id' => null,                     // kid sent in X-MyInvoice-Key-Id
+                'private_key_path' => null,           // MyInvoice signing key (private half never leaves this instance)
+                'timeout_seconds' => 10,
+                'max_attempts' => 12,                 // after this many failed attempts the event is dead-lettered
+            ],
+        ],
+    ],
     'app' => [
         'env'    => 'production',                    // 'development' | 'production' (řídí debug výpisy, error reporting). Nikdy nedávat 'development' na veřejně dostupný server.
         'debug'  => false,                           // false v produkci — skryje stack trace v API odpovědích

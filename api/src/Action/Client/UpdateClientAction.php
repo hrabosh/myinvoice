@@ -8,11 +8,11 @@ use MyInvoice\Http\Json;
 use MyInvoice\Http\SupplierGuard;
 use MyInvoice\Middleware\AuthMiddleware;
 use MyInvoice\Middleware\SupplierScopeMiddleware;
-use MyInvoice\Repository\ClientEmailContactRepository;
 use MyInvoice\Repository\ClientRepository;
-use MyInvoice\Service\ActivityLogger;
+use MyInvoice\Service\WriteActor;
+use MyInvoice\Service\Client\ClientWriteException;
+use MyInvoice\Service\Client\ClientWriter;
 use MyInvoice\Service\IpMatcher;
-use MyInvoice\Service\Validation;
 use Psr\Http\Message\ResponseInterface as Response;
 use Psr\Http\Message\ServerRequestInterface as Request;
 
@@ -20,9 +20,8 @@ final class UpdateClientAction
 {
     public function __construct(
         private readonly ClientRepository $repo,
-        private readonly ActivityLogger $logger,
+        private readonly ClientWriter $writer,
         private readonly IpMatcher $ipMatcher,
-        private readonly ClientEmailContactRepository $emailContacts,
     ) {}
 
     public function __invoke(Request $request, Response $response, array $args): Response
@@ -33,42 +32,25 @@ final class UpdateClientAction
         }
 
         $body = (array) ($request->getParsedBody() ?? []);
-        $errors = Validation::client($body);
-        if (!empty($errors)) {
-            return Json::error($response, 'validation_failed', 'Validace selhala', 400, ['fields' => $errors]);
-        }
+        $supplierId = (int) $request->getAttribute(SupplierScopeMiddleware::ATTR_CURRENT_ID, 0);
+        $user = (array) $request->getAttribute(AuthMiddleware::ATTR_USER, []);
+        $actor = new WriteActor(
+            isset($user['id']) ? (int) $user['id'] : null,
+            $this->ipMatcher->clientIpFromRequest($request->getServerParams()),
+            $request->getHeaderLine('User-Agent'),
+        );
 
         try {
-            $backfilled = $this->repo->update($id, $body);
-        } catch (\InvalidArgumentException $e) {
-            return Json::error($response, 'integrity_violation', $e->getMessage(), 400);
+            $result = $this->writer->update($id, $supplierId, $body, $actor);
+        } catch (ClientWriteException $e) {
+            return ClientWriteResponse::error($response, $e);
         }
-
-        $supplierId = (int) $request->getAttribute(SupplierScopeMiddleware::ATTR_CURRENT_ID, 0);
-        // E-mailové kontakty dle účelu (#86) — replace-all, jen pokud klíč v payloadu je
-        // (partial update bez klíče kontakty nemění). Změny do activity logu.
-        $contactsChanged = false;
-        if (isset($body['email_contacts']) && is_array($body['email_contacts'])) {
-            try {
-                $this->emailContacts->replaceForClient($id, $supplierId, $body['email_contacts']);
-                $contactsChanged = true;
-            } catch (\DomainException $e) {
-                return Json::error($response, 'invalid_email_contacts', $e->getMessage(), 422);
-            }
-        }
-
-        $user = (array) $request->getAttribute(AuthMiddleware::ATTR_USER, []);
-        $ip = $this->ipMatcher->clientIpFromRequest($request->getServerParams());
-        $this->logger->log('client.updated', $user['id'] ?? null, 'client', $id,
-            $contactsChanged ? ['email_contacts' => $body['email_contacts']] : null,
-            $ip, $request->getHeaderLine('User-Agent'));
 
         // *_category_backfilled = počet faktur, do kterých byla doplněna nově nastavená
         // výchozí kategorie nákladu / tržby (frontend ukáže toast).
-        $client = $this->repo->find($id) ?? [];
-        $client['email_contacts'] = $this->emailContacts->listForClient($id, $supplierId);
-        $client['expense_category_backfilled'] = $backfilled['expense'];
-        $client['revenue_category_backfilled'] = $backfilled['revenue'];
+        $client = $result['client'];
+        $client['expense_category_backfilled'] = $result['backfilled']['expense'];
+        $client['revenue_category_backfilled'] = $result['backfilled']['revenue'];
         return Json::ok($response, $client);
     }
 }

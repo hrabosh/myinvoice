@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace MyInvoice\Middleware;
 
 use MyInvoice\Http\Json;
+use MyInvoice\Service\Auth\Permission;
+use MyInvoice\Service\Auth\PermissionPolicy;
 use MyInvoice\Service\Tenant\SupplierAccessResolver;
 use Psr\Http\Message\ResponseInterface as Response;
 use Psr\Http\Message\ServerRequestInterface as Request;
@@ -30,7 +32,7 @@ use Slim\Psr7\Factory\ResponseFactory;
 final class RoleMiddleware implements MiddlewareInterface
 {
     /** Cesty, kde RBAC neaplikujeme (public + self-service). */
-    private const PUBLIC_OR_SELF = [
+    public const PUBLIC_OR_SELF = [
         '/api/health',
         '/api/version',
         '/api/openapi.yaml',
@@ -43,6 +45,8 @@ final class RoleMiddleware implements MiddlewareInterface
         '/api/auth/setup-crpdph-lookup',
         '/api/auth/setup-sample',
         '/api/auth/login',
+        // Jednorázový SSO ticket se ověřuje sám a session teprve vydává.
+        '/api/auth/revizior/sso',
         '/api/auth/webauthn/login/options',
         '/api/auth/webauthn/login/verify',
         '/api/auth/logout',
@@ -189,10 +193,15 @@ final class RoleMiddleware implements MiddlewareInterface
     public function __construct(
         private readonly ResponseFactory $responseFactory,
         private readonly SupplierAccessResolver $supplierAccess,
+        private readonly PermissionPolicy $permissions,
     ) {}
 
     public function process(Request $request, Handler $handler): Response
     {
+        if ($request->getAttribute(ReviziorServiceAuthMiddleware::ATTR_IDENTITY) !== null) {
+            return $handler->handle($request);
+        }
+
         $path = $request->getUri()->getPath();
         $method = strtoupper($request->getMethod());
 
@@ -203,14 +212,18 @@ final class RoleMiddleware implements MiddlewareInterface
 
         $user = (array) $request->getAttribute(AuthMiddleware::ATTR_USER, []);
         $role = (string) ($user['role'] ?? '');
+        $platformRole = (string) ($user['platform_role'] ?? $role);
+        $user['platform_role'] = $platformRole;
+        $request = $request->withAttribute(AuthMiddleware::ATTR_USER, $user);
 
         // Per-supplier role override (user_suppliers.role) — efektivní role pro
         // aktuální firmu. RoleMiddleware běží PŘED SupplierScope, proto supplier
         // resolvuje sdílený SupplierAccessResolver (memoizováno, SupplierScope ho
-        // znovu nepočítá). Efektivní roli propíšeme do ATTR_USER, aby ji viděly
-        // i Action-level guardy (SettingsAction/UserAdminAction čtou role z attrs)
-        // a hlavně /api/auth/me — FE si z něj řídí auth.canWrite, takže se počítá
-        // i na self-service cestách (proto před PUBLIC_OR_SELF větví).
+        // znovu nepočítá). Efektivní legacy roli propíšeme do ATTR_USER, aby ji
+        // viděly i Action-level guardy a /api/auth/me — FE si z něj řídí
+        // auth.canWrite. Původní platform role a přesná tenantová role zůstávají
+        // vedle ní jako `platform_role` a `supplier_role`. Počítá se i na
+        // self-service cestách (proto před PUBLIC_OR_SELF větví).
         // denied requesty neřešíme — SupplierScopeMiddleware je stejně ukončí 403.
         //
         // BEZPEČNOST: resolver vrací override=NULL pro globální adminy (ti si roli
@@ -218,16 +231,23 @@ final class RoleMiddleware implements MiddlewareInterface
         // per-supplier přiřazení NIKDY nesmí povýšit uživatele na globálního admina
         // (admin endpointy /api/admin/* nejsou supplier-scoped; jinak by šlo přes
         // override eskalovat na celoinstančního admina). 'admin' je i tak už mimo
-        // enum user_suppliers.role (migrace 0148), tohle je pojistka proti stray řádku.
+        // povolené tenantové role (migrace 0148 + 0151); pojistka proti stray řádku.
         if ($role !== '') {
             $access = $this->supplierAccess->resolve($request);
             if (!$access->denied && $access->roleOverride !== null) {
-                $override = $access->roleOverride === 'admin' ? 'accountant' : $access->roleOverride;
+                $supplierRole = $access->roleOverride;
+                // supplier_owner dostává účetní oprávnění stávajícího jádra,
+                // ale nikdy globální admin fallback pro /api/admin/*. Jeho
+                // rozšířená tenantová oprávnění doplní centralizovaná policy.
+                $override = in_array($supplierRole, ['admin', 'supplier_owner'], true)
+                    ? 'accountant'
+                    : $supplierRole;
+                $user['supplier_role'] = $supplierRole;
                 if ($override !== $role) {
                     $role = $override;
                     $user['role'] = $role;
-                    $request = $request->withAttribute(AuthMiddleware::ATTR_USER, $user);
                 }
+                $request = $request->withAttribute(AuthMiddleware::ATTR_USER, $user);
             }
         }
 
@@ -242,6 +262,18 @@ final class RoleMiddleware implements MiddlewareInterface
         if ($role === '') {
             $response = $this->responseFactory->createResponse(401);
             return Json::error($response, 'unauthenticated', 'Nepřihlášený uživatel.', 401);
+        }
+
+        // Citlivé supplier-scoped operace mají vlastní permission význam. Tato
+        // větev je úmyslně před legacy admin/accountant fallbackem: supplier_owner
+        // dostane tenantové oprávnění, ale žádné platformní admin endpointy.
+        $requiredPermission = $this->requiredPermission($method, $path);
+        if ($requiredPermission !== null) {
+            if ($this->permissions->allows($request, $requiredPermission)) {
+                return $handler->handle($request);
+            }
+            $response = $this->responseFactory->createResponse(403);
+            return Json::error($response, 'forbidden', 'Pro tuto akci nemáš oprávnění.', 403);
         }
 
         // admin smí všechno
@@ -283,5 +315,68 @@ final class RoleMiddleware implements MiddlewareInterface
             if (preg_match($rulePattern, $path) === 1) return true;
         }
         return false;
+    }
+
+    private function requiredPermission(string $method, string $path): ?Permission
+    {
+        // Platformní oprávnění se vždy odvozují z users.role. Explicitní mapování
+        // je před tenantovými pravidly, aby žádná supplier role ani budoucí
+        // rozšíření ACCOUNTANT_RULES nemohly otevřít správu celé instalace.
+        if ($path === '/api/admin/users' || str_starts_with($path, '/api/admin/users/')) {
+            return Permission::PlatformUsersManage;
+        }
+        if (str_starts_with($path, '/api/admin/update')
+            || str_starts_with($path, '/api/admin/myucto-upgrade')
+        ) {
+            return Permission::PlatformUpdateManage;
+        }
+        if ($this->isPlatformSettingsPath($method, $path)) {
+            return Permission::PlatformSettingsManage;
+        }
+        if ($method !== 'GET' && str_starts_with($path, '/api/price-list-items')) {
+            return Permission::PriceListManage;
+        }
+        if ($method === 'PUT' && in_array($path, [
+            '/api/settings/supplier',
+            '/api/settings/supplier/invoice-counter',
+        ], true)) {
+            return Permission::SupplierSettingsManage;
+        }
+        if ($path === '/api/settings/supplier/members'
+            || str_starts_with($path, '/api/settings/supplier/members/')
+        ) {
+            return Permission::SupplierMembersManage;
+        }
+        if (str_starts_with($path, '/api/settings/branding-profiles')
+            || str_starts_with($path, '/api/settings/email-branding')
+            || in_array($path, [
+                '/api/settings/supplier/logo',
+            ], true)
+        ) {
+            return Permission::SupplierBrandingManage;
+        }
+        return null;
+    }
+
+    private function isPlatformSettingsPath(string $method, string $path): bool
+    {
+        if ($method !== 'GET' && ($path === '/api/suppliers' || str_starts_with($path, '/api/suppliers/'))) {
+            return true;
+        }
+        foreach ([
+            '/api/admin/activity-log',
+            '/api/admin/sent-emails',
+            '/api/admin/smtp-log-analysis',
+            '/api/admin/cron-jobs',
+            '/api/admin/approvals',
+            '/api/admin/email-templates',
+        ] as $prefix) {
+            if ($path === $prefix || str_starts_with($path, $prefix . '/')) return true;
+        }
+        if (preg_match('#^/api/admin/invoices/[0-9]+/smtp-log$#', $path) === 1) {
+            return true;
+        }
+        return $method !== 'GET'
+            && preg_match('#^/api/admin/imports/(idoklad|fakturoid|anthropic)/credentials$#', $path) === 1;
     }
 }

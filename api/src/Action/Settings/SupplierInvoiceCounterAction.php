@@ -8,13 +8,16 @@ use MyInvoice\Http\Json;
 use MyInvoice\Middleware\AuthMiddleware;
 use MyInvoice\Middleware\SupplierScopeMiddleware;
 use MyInvoice\Service\ActivityLogger;
+use MyInvoice\Service\Auth\Permission;
+use MyInvoice\Service\Auth\PermissionPolicy;
 use MyInvoice\Service\Invoice\VarsymbolGenerator;
 use MyInvoice\Service\IpMatcher;
 use Psr\Http\Message\ResponseInterface as Response;
 use Psr\Http\Message\ServerRequestInterface as Request;
 
 /**
- * PUT /api/settings/supplier/invoice-counter — nastaví counter číselné řady (admin).
+ * PUT /api/settings/supplier/invoice-counter — nastaví counter číselné řady
+ * uživateli se supplier_settings.manage.
  *
  * Body: { "type": "invoice"|"proforma"|"credit_note", "next_number": 42, "date": "2026-07-01"? }
  *
@@ -36,14 +39,15 @@ final class SupplierInvoiceCounterAction
         private readonly VarsymbolGenerator $varsymbol,
         private readonly ActivityLogger $logger,
         private readonly IpMatcher $ipMatcher,
+        private readonly PermissionPolicy $permissions,
     ) {}
 
     public function __invoke(Request $request, Response $response): Response
     {
-        $user = (array) $request->getAttribute(AuthMiddleware::ATTR_USER, []);
-        if (($user['role'] ?? '') !== 'admin') {
-            return Json::error($response, 'forbidden', 'Pouze admin.', 403);
+        if (!$this->permissions->allows($request, Permission::SupplierSettingsManage)) {
+            return Json::error($response, 'forbidden', 'Pro správu nastavení firmy nemáš oprávnění.', 403);
         }
+        $user = (array) $request->getAttribute(AuthMiddleware::ATTR_USER, []);
 
         $supplierId = (int) $request->getAttribute(SupplierScopeMiddleware::ATTR_CURRENT_ID, 0);
         if ($supplierId <= 0) {

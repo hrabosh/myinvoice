@@ -40,10 +40,12 @@ if (-not (Test-Path .env)) {
     Write-Host "==> Generating .env with random DB passwords…"
     $rootPass = New-RandomToken 24
     $userPass = New-RandomToken 24
+    $localAppPort = if ($env:APP_PORT) { $env:APP_PORT } else { '8080' }
+    $localDbPort = if ($env:DB_PORT) { $env:DB_PORT } else { '3307' }
     @"
 # MyInvoice.cz - Docker compose env (gitignored)
-APP_PORT=8080
-DB_PORT=3307
+APP_PORT=$localAppPort
+DB_PORT=$localDbPort
 DB_NAME=myinvoice
 DB_USER=myinvoice
 DB_ROOT_PASSWORD=$rootPass
@@ -129,7 +131,7 @@ if ($mode -eq 'registry') {
 
 if ($mode -eq 'source') {
     & docker image inspect myinvoice:latest 2>$null | Out-Null
-    if ($LASTEXITCODE -ne 0) {
+    if ($Build -or $LASTEXITCODE -ne 0) {
         Write-Host "==> Building image…"
         & docker compose @composeArgs build app
         if ($LASTEXITCODE -ne 0) { Write-Error "docker compose build failed" }

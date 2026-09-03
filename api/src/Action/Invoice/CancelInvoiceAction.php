@@ -37,6 +37,7 @@ final class CancelInvoiceAction
         private readonly ActivityLogger $logger,
         private readonly IpMatcher $ipMatcher,
         private readonly StatsRecomputer $stats,
+        private readonly \MyInvoice\Service\Integration\Revizior\ReviziorInvoiceEventPublisher $reviziorEvents,
     ) {}
 
     public function __invoke(Request $request, Response $response, array $args): Response
@@ -114,6 +115,7 @@ final class CancelInvoiceAction
         }
 
         $ip = $this->ipMatcher->clientIpFromRequest($request->getServerParams());
+        $this->reviziorEvents->publish((int) $invoice['id'], \MyInvoice\Service\Integration\Revizior\ReviziorInvoiceEventPublisher::TYPE_CANCELLED);
         $this->logger->log('invoice.cancelled', $userId, 'invoice', $invoice['id'], [
             'mode' => 'internal',
             'cancellation_id' => $cancellationId,
@@ -242,6 +244,7 @@ final class CancelInvoiceAction
         $this->calc->recompute($creditNoteId);
 
         $ip = $this->ipMatcher->clientIpFromRequest($request->getServerParams());
+        $this->reviziorEvents->publish((int) $invoice['id'], \MyInvoice\Service\Integration\Revizior\ReviziorInvoiceEventPublisher::TYPE_CREDIT_NOTE_ISSUED);
         $this->logger->log('invoice.credit_note_created', $userId, 'invoice', $invoice['id'], [
             'credit_note_id' => $creditNoteId,
             'reason'         => $reason,

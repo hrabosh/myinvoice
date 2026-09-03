@@ -7,6 +7,38 @@ endpoint kromě setup endpointů a healthchecku neodpovídá. Wizard je jednorá
 Wizard má **3 kroky** (admin → dodavatel → sample data) a po dokončení tě
 **automaticky přihlásí**.
 
+> 🛈 V řízené instalaci **ReviziOR Fakturace** se veřejný setup wizard
+> nepoužívá. Firmu i uživatele zakládá ReviziOR a aplikace nabídne bezpečný
+> odkaz **Zpět do ReviziORu**. Pokud se v tomto režimu setup zobrazí, kontaktuj
+> správce nasazení.
+
+### Provozní administrátor řízené instalace
+
+Správce nasazení vytvoří jediný break-glass platformní účet mimo veřejný web:
+
+```bash
+cmd/revizior-bootstrap-platform-admin.sh \
+  --email=ops@example.invalid \
+  --name="Operations"
+```
+
+Ve Windows použije odpovídající PowerShell wrapper:
+
+```powershell
+.\cmd\revizior-bootstrap-platform-admin.ps1 \
+  -Email ops@example.invalid \
+  -Name "Operations"
+```
+
+V Dockeru lze stejné CLI spustit přes
+`docker compose exec app php api/bin/revizior-bootstrap-platform-admin.php …`.
+Příkaz funguje jen s `MYINVOICE_DEPLOYMENT_MODE=revizior_managed` a povinným
+MFA (`auth.require_mfa=true`). Heslo načítá skrytě ze standardního vstupu,
+nikdy z argumentu, vyžaduje potvrzení a účet nepřiřadí k žádné firmě. Pro
+řízený neinteraktivní deploy je nutný explicitní přepínač `--confirm`; heslo
+se i tehdy předává standardním vstupem. Vytvoření i opakované ověření účtu se
+zapíše do bezpečnostního auditu.
+
 ## 6.1 Krok 1 — Administrátor
 
 ![Setup wizard krok 1](img/03_setup_admin.webp)

@@ -1,6 +1,14 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
-import { authApi, type User, type SetupStatus, type SessionState } from '@/api/auth'
+import {
+  authApi,
+  type DeploymentContext,
+  type DeploymentModule,
+  type Permission,
+  type User,
+  type SetupStatus,
+  type SessionState,
+} from '@/api/auth'
 import { setCsrfToken } from '@/api/client'
 import { broadcastSessionEvent } from '@/security/sessionChannel'
 import { useSupplierStore } from './supplier'
@@ -9,6 +17,8 @@ export const useAuthStore = defineStore('auth', () => {
   const user = ref<User | null>(null)
   const csrfToken = ref<string>('')
   const setupStatus = ref<SetupStatus | null>(null)
+  const deployment = ref<DeploymentContext | null>(null)
+  const permissions = ref<Permission[]>([])
   const allowedMfaMethods = ref<Array<'passkey' | 'totp'>>([])
   const requireMfa = ref(false)
   const loading = ref(false)
@@ -21,16 +31,28 @@ export const useAuthStore = defineStore('auth', () => {
   const needsSetup = computed(() => setupStatus.value?.needs_setup === true)
   const mustSetupTotp = computed(() => user.value?.must_setup_totp === true)
   const mustSetupMfa = computed(() => user.value?.must_setup_mfa === true)
+  const isManaged = computed(() => deployment.value?.deploymentMode === 'revizior_managed')
+  const productName = computed(() => deployment.value?.productName || 'MyInvoice.cz')
+  const returnUrl = computed(() => deployment.value?.returnUrl || null)
 
   // Role helpers. readonly vidí vše co účetní (vč. exportů a DPH výkazů — vše jsou GETy),
   // ale nesmí nic měnit → canWrite gatuje všechna zápisová tlačítka v UI.
-  const isAdmin = computed(() => user.value?.role === 'admin')
+  const isAdmin = computed(() => (user.value?.platform_role ?? user.value?.role) === 'admin')
   const isReadonly = computed(() => user.value?.role === 'readonly')
   const canWrite = computed(() => user.value != null && user.value.role !== 'readonly')
 
   async function fetchSetupStatus() {
     setupStatus.value = await authApi.setupStatus()
+    deployment.value = setupStatus.value
     return setupStatus.value
+  }
+
+  function moduleEnabled(module: DeploymentModule) {
+    return deployment.value?.modules[module] !== false
+  }
+
+  function hasPermission(permission: Permission) {
+    return permissions.value.includes(permission)
   }
 
   function setSessionCsrfToken(token: string) {
@@ -47,6 +69,8 @@ export const useAuthStore = defineStore('auth', () => {
   async function refresh() {
     try {
       const data = await authApi.me()
+      deployment.value = data
+      permissions.value = data.permissions || []
       user.value = data.user
       setSessionCsrfToken(data.csrf_token)
       setMfaPolicy(data.require_mfa, data.allowed_mfa_methods)
@@ -72,6 +96,7 @@ export const useAuthStore = defineStore('auth', () => {
       }
       if (!error?.response && user.value !== null) return false
       user.value = null
+      permissions.value = []
       setSessionCsrfToken('')
       setMfaPolicy(false, [])
       lockedSession.value = null
@@ -119,6 +144,7 @@ export const useAuthStore = defineStore('auth', () => {
     setMfaPolicy(false, [])
     lockedSession.value = null
     profileHydrated.value = false
+    permissions.value = []
     useSupplierStore().setAvailable([], 0)
   }
 
@@ -162,6 +188,8 @@ export const useAuthStore = defineStore('auth', () => {
     user,
     csrfToken,
     setupStatus,
+    deployment,
+    permissions,
     allowedMfaMethods,
     requireMfa,
     loading,
@@ -171,10 +199,15 @@ export const useAuthStore = defineStore('auth', () => {
     needsSetup,
     mustSetupTotp,
     mustSetupMfa,
+    isManaged,
+    productName,
+    returnUrl,
     isAdmin,
     isReadonly,
     canWrite,
     fetchSetupStatus,
+    moduleEnabled,
+    hasPermission,
     setSessionCsrfToken,
     setMfaPolicy,
     setLockedSession,

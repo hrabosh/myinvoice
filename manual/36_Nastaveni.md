@@ -120,7 +120,9 @@ dodavateli), nahrazuje volný textový vstup za dropdown.
 
 ### 36.1.5 Ceníkové položky
 
-**Prodej → Ceník** (jen administrátor) spravuje ceník aktuálního dodavatele.
+**Prodej → Ceník** spravuje ceník aktuálního dodavatele. Ve standalone instalaci
+jej spravuje administrátor; v managed režimu také vlastník aktuální firmy
+(`supplier_owner`). Účetní a uživatel pouze pro čtení ceník spravovat nemohou.
 Každá položka má kód, název, fakturační popis, jednotku, sazbu DPH a povinnou
 základní cenu v jedné měně. Kód je unikátní pouze v rámci dodavatele.
 Přehled lze prohledávat a filtrovat podle měny a aktivního či archivovaného
@@ -199,7 +201,9 @@ který má být v jedné z firem jen **readonly**.
 
 > 🛈 Role **admin** je celoinstanční — přiřazení firem se u ní neuplatní a admin
 > vidí vždy všechny firmy. Proto se instalace nedá „vyzamknout". Ze stejného
-> důvodu nejde per-firmu nastavit role `admin`, jen `accountant` a `readonly`.
+> důvodu nejde per-firmu nastavit role `admin`. Managed instalace navíc používá
+> roli `supplier_owner`: vlastník může pro aktuální firmu spravovat její údaje,
+> číselnou řadu, ceník a branding, ale nezíská globální správu instalace.
 
 Omezení hlídá server, ne jen UI:
 
@@ -207,6 +211,41 @@ Omezení hlídá server, ne jen UI:
 - detail cizí firmy vrátí `404` (neprozrazuje, že existuje),
 - **API token** vázaný na firmu mimo přiřazené se nevytvoří a nefunguje,
 - po odebrání firmy si aplikace sama přepne na první povolenou.
+
+### 36.2.4 Členové aktuální firmy
+
+Vlastník firmy (`supplier_owner`) otevře **Systém → Členové firmy**. Stránka
+zobrazuje pouze explicitní členy aktuálně zvolené firmy a dovolí změnit jejich
+tenantovou roli na vlastník, účetní nebo pouze čtení, případně člena z firmy
+odebrat. Nemění jméno, heslo, aktivitu ani globální roli účtu a nikdy nezobrazuje
+uživatele jiných firem.
+
+Vlastní členství nelze z této stránky změnit a posledního aktivního vlastníka
+nelze snížit ani odebrat. Po změně role nebo odebrání systém odvolá existující
+session dotčeného uživatele. Nový globální účet zakládá správce instalace;
+v managed režimu jej standardně synchronizuje ReviziOR.
+
+### 36.2.5 Nastavení fakturace (managed režim)
+
+**Systém → Nastavení fakturace** je tenantová obrazovka pro vlastníka firmy
+(`supplier_owner`) v režimu ReviziOR Fakturace. Ve standalone instalaci se
+nezobrazuje — tam je celé nastavení firmy v **Systém → Číselníky**.
+
+Obsahuje jen to, co je potřeba k vystavení dokladu:
+
+- **fakturační identita** — název firmy, ulice, město a PSČ;
+- **daňové údaje** — IČO, DIČ a režim DPH (neplátce, identifikovaná osoba,
+  plátce);
+- **kontakt** — e-mail, telefon a web na dokladu;
+- **výchozí hodnoty dokladu** — splatnost a režim cen (s DPH / bez DPH).
+
+Země se needituje: přiřazuje ji ReviziOR podle organizace a její změna by
+rozhodila daňový režim už vystavených dokladů. Chybějící povinné údaje stránka
+vypíše nahoře, ještě než se doklad pokusíš vystavit.
+
+Změny platí pro aktuálně zvolenou firmu, ne pro celou instalaci. Do obrazovky
+se dá přejít i přímo z ReviziORu (**Fakturace → Nastavení**), který uživatele
+přihlásí jednorázovým odkazem.
 
 ## 36.3 Můj profil
 

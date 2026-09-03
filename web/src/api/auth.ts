@@ -5,6 +5,8 @@ export interface User {
   email: string
   name: string
   role: 'admin' | 'accountant' | 'readonly'
+  platform_role?: 'admin' | 'accountant' | 'readonly'
+  supplier_role?: 'supplier_owner' | 'accountant' | 'readonly' | null
   locale: 'cs' | 'en'
   totp_enabled?: boolean
   must_setup_totp?: boolean
@@ -37,7 +39,46 @@ export interface SupplierBrief {
   payment_thanks_default_checked: boolean
 }
 
-export interface SetupStatus {
+export type DeploymentModule =
+  | 'salesInvoices'
+  | 'clients'
+  | 'projects'
+  | 'priceList'
+  | 'bank'
+  | 'documents'
+  | 'purchaseInvoices'
+  | 'tax'
+  | 'payroll'
+  | 'logbook'
+  | 'selfUpdate'
+  | 'myuctoUpgrade'
+
+export type Permission =
+  | 'invoice.read'
+  | 'invoice.write'
+  | 'invoice.issue'
+  | 'invoice.cancel'
+  | 'payment.write'
+  | 'client.read'
+  | 'client.write'
+  | 'project.write'
+  | 'price_list.manage'
+  | 'supplier_settings.manage'
+  | 'supplier_members.manage'
+  | 'supplier_branding.manage'
+  | 'supplier_exports.read'
+  | 'platform_settings.manage'
+  | 'platform_users.manage'
+  | 'platform_update.manage'
+
+export interface DeploymentContext {
+  deploymentMode: 'standalone' | 'revizior_managed'
+  productName: string
+  modules: Record<DeploymentModule, boolean>
+  returnUrl: string | null
+}
+
+export interface SetupStatus extends DeploymentContext {
   needs_setup: boolean
   version: string
   passwordless_login_enabled: boolean
@@ -107,9 +148,10 @@ export interface AuthSessionContract {
   lock_after_minutes: number
 }
 
-export interface MeResponse extends AuthSessionContract {
+export interface MeResponse extends AuthSessionContract, DeploymentContext {
   current_supplier_id: number
   suppliers: SupplierBrief[]
+  permissions: Permission[]
 }
 
 export interface PasskeyCredential {

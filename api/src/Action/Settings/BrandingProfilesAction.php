@@ -5,9 +5,10 @@ declare(strict_types=1);
 namespace MyInvoice\Action\Settings;
 
 use MyInvoice\Http\Json;
-use MyInvoice\Middleware\AuthMiddleware;
 use MyInvoice\Middleware\SupplierScopeMiddleware;
 use MyInvoice\Repository\BrandingProfileRepository;
+use MyInvoice\Service\Auth\Permission;
+use MyInvoice\Service\Auth\PermissionPolicy;
 use MyInvoice\Service\Branding\BrandingProfileValidation;
 use MyInvoice\Service\Mail\SupplierLogoConverter;
 use MyInvoice\Service\Pdf\InvoicePdfRenderer;
@@ -23,10 +24,12 @@ final class BrandingProfilesAction
         private readonly BrandingProfileRepository $profiles,
         private readonly SupplierLogoConverter $logoConverter,
         private readonly InvoicePdfRenderer $invoicePdf,
+        private readonly PermissionPolicy $permissions,
     ) {}
 
     public function list(Request $request, Response $response): Response
     {
+        if (!$this->canManage($request)) return $this->forbidden($response);
         $supplierId = $this->supplierId($request);
         if ($supplierId <= 0) return Json::error($response, 'no_supplier', 'Žádný supplier scope.', 400);
         return Json::ok($response, $this->profiles->listForSupplier($supplierId));
@@ -46,7 +49,7 @@ final class BrandingProfilesAction
 
     public function create(Request $request, Response $response): Response
     {
-        if (!$this->isAdmin($request)) return Json::error($response, 'forbidden', 'Pouze admin.', 403);
+        if (!$this->canManage($request)) return $this->forbidden($response);
         $supplierId = $this->supplierId($request);
         if ($supplierId <= 0) return Json::error($response, 'no_supplier', 'Žádný supplier scope.', 400);
         if (($gate = $this->requireEnabled($response, $supplierId)) !== null) return $gate;
@@ -66,7 +69,7 @@ final class BrandingProfilesAction
 
     public function update(Request $request, Response $response, array $args): Response
     {
-        if (!$this->isAdmin($request)) return Json::error($response, 'forbidden', 'Pouze admin.', 403);
+        if (!$this->canManage($request)) return $this->forbidden($response);
         $supplierId = $this->supplierId($request);
         if (($gate = $this->requireEnabled($response, $supplierId)) !== null) return $gate;
         $id = (int) ($args['id'] ?? 0);
@@ -89,7 +92,7 @@ final class BrandingProfilesAction
 
     public function delete(Request $request, Response $response, array $args): Response
     {
-        if (!$this->isAdmin($request)) return Json::error($response, 'forbidden', 'Pouze admin.', 403);
+        if (!$this->canManage($request)) return $this->forbidden($response);
         $supplierId = $this->supplierId($request);
         if (($gate = $this->requireEnabled($response, $supplierId)) !== null) return $gate;
         $id = (int) ($args['id'] ?? 0);
@@ -100,7 +103,7 @@ final class BrandingProfilesAction
 
     public function setDefault(Request $request, Response $response, array $args): Response
     {
-        if (!$this->isAdmin($request)) return Json::error($response, 'forbidden', 'Pouze admin.', 403);
+        if (!$this->canManage($request)) return $this->forbidden($response);
         $supplierId = $this->supplierId($request);
         if (($gate = $this->requireEnabled($response, $supplierId)) !== null) return $gate;
         $id = (int) ($args['id'] ?? 0);
@@ -114,7 +117,7 @@ final class BrandingProfilesAction
 
     public function uploadLogo(Request $request, Response $response, array $args): Response
     {
-        if (!$this->isAdmin($request)) return Json::error($response, 'forbidden', 'Pouze admin.', 403);
+        if (!$this->canManage($request)) return $this->forbidden($response);
         $supplierId = $this->supplierId($request);
         if (($gate = $this->requireEnabled($response, $supplierId)) !== null) return $gate;
         $id = (int) ($args['id'] ?? 0);
@@ -149,7 +152,7 @@ final class BrandingProfilesAction
 
     public function deleteLogo(Request $request, Response $response, array $args): Response
     {
-        if (!$this->isAdmin($request)) return Json::error($response, 'forbidden', 'Pouze admin.', 403);
+        if (!$this->canManage($request)) return $this->forbidden($response);
         $supplierId = $this->supplierId($request);
         if (($gate = $this->requireEnabled($response, $supplierId)) !== null) return $gate;
         $id = (int) ($args['id'] ?? 0);
@@ -199,9 +202,13 @@ final class BrandingProfilesAction
         return (int) $request->getAttribute(SupplierScopeMiddleware::ATTR_CURRENT_ID, 0);
     }
 
-    private function isAdmin(Request $request): bool
+    private function canManage(Request $request): bool
     {
-        $user = (array) $request->getAttribute(AuthMiddleware::ATTR_USER, []);
-        return ($user['role'] ?? '') === 'admin';
+        return $this->permissions->allows($request, Permission::SupplierBrandingManage);
+    }
+
+    private function forbidden(Response $response): Response
+    {
+        return Json::error($response, 'forbidden', 'Pro správu brandingu nemáš oprávnění.', 403);
     }
 }

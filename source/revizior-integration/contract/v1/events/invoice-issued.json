@@ -1,0 +1,28 @@
+{
+  "specVersion": "1.0",
+  "eventId": "80000000-0000-4000-8000-000000000001",
+  "eventType": "invoice.issued",
+  "occurredAt": "2026-08-30T18:15:00Z",
+  "organizationId": "30000000-0000-4000-8000-000000000001",
+  "supplierId": "123",
+  "aggregate": {
+    "type": "invoice",
+    "id": "789",
+    "externalKey": "60000000-0000-4000-8000-000000000001",
+    "sequence": 4
+  },
+  "data": {
+    "invoiceNumber": "20260048",
+    "status": "issued",
+    "rawStatus": "issued",
+    "currency": "CZK",
+    "totalMinor": 544500,
+    "amountDueMinor": 544500,
+    "issuedAt": "2026-08-30T18:14:55Z",
+    "dueAt": "2026-09-13",
+    "paidAt": null,
+    "editPath": "/invoices/789/edit",
+    "publicUrl": null,
+    "pdfUrl": null
+  }
+}

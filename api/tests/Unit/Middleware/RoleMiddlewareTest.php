@@ -374,6 +374,128 @@ final class RoleMiddlewareTest extends TestCase
         }
     }
 
+    public function testSupplierOwnerGetsBusinessWritesWithoutPlatformAdminFallback(): void
+    {
+        $middleware = $this->middlewareWithOverride('supplier_owner');
+
+        self::assertSame(204, $middleware->process(
+            $this->request('POST', '/api/clients', 'readonly'),
+            $this->okHandler(),
+        )->getStatusCode());
+        self::assertSame(403, $middleware->process(
+            $this->request('GET', '/api/admin/users', 'readonly'),
+            $this->okHandler(),
+        )->getStatusCode());
+        self::assertSame(403, $middleware->process(
+            $this->request('GET', '/api/admin/update/status', 'readonly'),
+            $this->okHandler(),
+        )->getStatusCode());
+        self::assertSame(403, $middleware->process(
+            $this->request('POST', '/api/suppliers', 'readonly'),
+            $this->okHandler(),
+        )->getStatusCode());
+        self::assertSame(403, $middleware->process(
+            $this->request('PUT', '/api/suppliers/7', 'readonly'),
+            $this->okHandler(),
+        )->getStatusCode());
+    }
+
+    public function testPlatformPermissionsNeverComeFromSupplierOwnerRole(): void
+    {
+        $middleware = $this->middlewareWithOverride('supplier_owner');
+
+        foreach ([
+            ['GET', '/api/admin/users'],
+            ['PUT', '/api/admin/users/19'],
+            ['GET', '/api/admin/activity-log'],
+            ['POST', '/api/admin/cron-jobs/cron-cleanup/run'],
+            ['PUT', '/api/admin/imports/idoklad/credentials'],
+            ['GET', '/api/admin/update/status'],
+            ['POST', '/api/admin/myucto-upgrade/trigger'],
+            ['POST', '/api/suppliers'],
+            ['DELETE', '/api/suppliers/7'],
+        ] as [$method, $path]) {
+            self::assertSame(403, $middleware->process(
+                $this->request($method, $path, 'readonly'),
+                $this->okHandler(),
+            )->getStatusCode(), "$method $path");
+        }
+    }
+
+    public function testPlatformAdminPermissionsUsePlatformRole(): void
+    {
+        foreach ([
+            ['GET', '/api/admin/users'],
+            ['GET', '/api/admin/activity-log'],
+            ['GET', '/api/admin/update/status'],
+            ['POST', '/api/suppliers'],
+        ] as [$method, $path]) {
+            self::assertSame(204, $this->middleware()->process(
+                $this->request($method, $path, 'admin'),
+                $this->okHandler(),
+            )->getStatusCode(), "$method $path");
+        }
+    }
+
+    public function testSupplierOwnerCanManageTenantPriceListSettingsAndBranding(): void
+    {
+        $middleware = $this->middlewareWithOverride('supplier_owner');
+
+        foreach ([
+            ['POST', '/api/price-list-items'],
+            ['PUT', '/api/settings/supplier'],
+            ['PUT', '/api/settings/supplier/invoice-counter'],
+            ['GET', '/api/settings/branding-profiles'],
+            ['POST', '/api/settings/email-branding/logo'],
+            ['GET', '/api/settings/supplier/members'],
+            ['PUT', '/api/settings/supplier/members/19'],
+        ] as [$method, $path]) {
+            self::assertSame(204, $middleware->process(
+                $this->request($method, $path, 'readonly'),
+                $this->okHandler(),
+            )->getStatusCode(), "$method $path");
+        }
+    }
+
+    public function testAccountantCannotManageOwnerOnlyTenantConfiguration(): void
+    {
+        foreach ([
+            ['POST', '/api/price-list-items'],
+            ['PUT', '/api/settings/supplier'],
+            ['PUT', '/api/settings/supplier/invoice-counter'],
+            ['GET', '/api/settings/branding-profiles'],
+            ['POST', '/api/settings/email-branding/logo'],
+            ['GET', '/api/settings/supplier/members'],
+            ['PUT', '/api/settings/supplier/members/19'],
+        ] as [$method, $path]) {
+            self::assertSame(403, $this->middleware()->process(
+                $this->request($method, $path, 'accountant'),
+                $this->okHandler(),
+            )->getStatusCode(), "$method $path");
+        }
+    }
+
+    public function testSupplierOwnerKeepsPlatformAndSupplierRolesSeparateInRequest(): void
+    {
+        $response = $this->middlewareWithOverride('supplier_owner')->process(
+            $this->request('GET', '/api/auth/me', 'readonly'),
+            new class implements RequestHandlerInterface {
+                public function handle(ServerRequestInterface $request): ResponseInterface
+                {
+                    $user = (array) $request->getAttribute(AuthMiddleware::ATTR_USER, []);
+                    return (new ResponseFactory())->createResponse(204)
+                        ->withHeader('X-Test-Role', (string) ($user['role'] ?? ''))
+                        ->withHeader('X-Test-Platform-Role', (string) ($user['platform_role'] ?? ''))
+                        ->withHeader('X-Test-Supplier-Role', (string) ($user['supplier_role'] ?? ''));
+                }
+            },
+        );
+
+        self::assertSame('accountant', $response->getHeaderLine('X-Test-Role'));
+        self::assertSame('readonly', $response->getHeaderLine('X-Test-Platform-Role'));
+        self::assertSame('supplier_owner', $response->getHeaderLine('X-Test-Supplier-Role'));
+    }
+
     private function middleware(): RoleMiddleware
     {
         // Bez membershipu = žádný per-supplier override (BC větev resolveru).
@@ -381,7 +503,24 @@ final class RoleMiddlewareTest extends TestCase
         $resolver->method('resolve')->willReturn(
             new \MyInvoice\Service\Tenant\SupplierAccess(0, false, null),
         );
-        return new RoleMiddleware(new ResponseFactory(), $resolver);
+        return new RoleMiddleware(
+            new ResponseFactory(),
+            $resolver,
+            new \MyInvoice\Service\Auth\PermissionPolicy(),
+        );
+    }
+
+    private function middlewareWithOverride(string $role): RoleMiddleware
+    {
+        $resolver = $this->createStub(\MyInvoice\Service\Tenant\SupplierAccessResolver::class);
+        $resolver->method('resolve')->willReturn(
+            new \MyInvoice\Service\Tenant\SupplierAccess(7, false, $role),
+        );
+        return new RoleMiddleware(
+            new ResponseFactory(),
+            $resolver,
+            new \MyInvoice\Service\Auth\PermissionPolicy(),
+        );
     }
 
     private function request(string $method, string $path, string $role): ServerRequestInterface

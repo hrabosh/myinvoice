@@ -41,6 +41,10 @@ final class SupplierScopeMiddleware implements MiddlewareInterface
 
     public function process(Request $request, Handler $handler): Response
     {
+        if ($request->getAttribute(ReviziorServiceAuthMiddleware::ATTR_IDENTITY) !== null) {
+            return $handler->handle($request);
+        }
+
         $path = $request->getUri()->getPath();
         if (str_starts_with($path, '/api/auth/webauthn/')
             || str_starts_with($path, '/api/auth/mfa/')
@@ -52,6 +56,13 @@ final class SupplierScopeMiddleware implements MiddlewareInterface
         $access = $this->resolver->resolve($request);
 
         if ($access->denied) {
+            // Uživatel bez managed membershipu musí stále načíst vlastní stav a
+            // umět se bezpečně odhlásit. Supplier-scoped data však nedostane.
+            if (in_array($path, RoleMiddleware::PUBLIC_OR_SELF, true)
+                || str_starts_with($path, '/api/public/')
+            ) {
+                return $handler->handle($request->withAttribute(self::ATTR_CURRENT_ID, 0));
+            }
             $response = $this->responseFactory->createResponse(403);
             return Json::error($response, 'forbidden_supplier', 'K této firmě nemáš oprávnění.', 403);
         }

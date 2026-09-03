@@ -16,8 +16,10 @@ use MyInvoice\Middleware\AuthMiddleware;
 use MyInvoice\Middleware\CsrfMiddleware;
 use MyInvoice\Middleware\FirstRunLockMiddleware;
 use MyInvoice\Middleware\IpAllowlistMiddleware;
+use MyInvoice\Middleware\ManagedModeGuardMiddleware;
 use MyInvoice\Middleware\RateLimitMiddleware;
 use MyInvoice\Middleware\RequireMfaMiddleware;
+use MyInvoice\Middleware\ReviziorServiceAuthMiddleware;
 use MyInvoice\Middleware\RoleMiddleware;
 use MyInvoice\Middleware\SessionLockMiddleware;
 use MyInvoice\Middleware\SupplierScopeMiddleware;
@@ -27,6 +29,7 @@ use MyInvoice\Service\Auth\PasskeyService;
 use MyInvoice\Service\Auth\DatabaseSecurityClock;
 use MyInvoice\Service\Auth\SecurityClock;
 use MyInvoice\Service\Auth\WebAuthnConfigProvider;
+use MyInvoice\Service\Deployment\DeploymentCapabilities;
 use Monolog\Handler\RotatingFileHandler;
 use Monolog\Logger;
 use Psr\Clock\ClockInterface;
@@ -48,6 +51,9 @@ final class Bootstrap
     {
         $rootDir = self::rootDir();
         $config  = Config::load($rootDir);
+        // Eager validation: invalid managed-mode configuration must fail before
+        // the application starts accepting requests.
+        new DeploymentCapabilities($config);
 
         // Bezpečnostní guard: v produkci pepper musí být nastavený (jinak hesla nemají druhotnou ochranu)
         $env    = (string) $config->get('app.env', 'production');
@@ -184,7 +190,7 @@ final class Bootstrap
 
         // Slim 4 LIFO: poslední `add()` = NEJVĚTŠÍ vrstva = běží JAKO PRVNÍ.
         // Cílový order běhu (outside → inside):
-        //   IpAllowlist → FirstRunLock → Auth → SessionLock → RequireMfa → Role → SupplierScope → ApiScope → RateLimit → CSRF → WebAuthnBodyLimit → Routing → BodyParsing → Action
+        //   IpAllowlist → ManagedModeGuard → ReviziorServiceAuth → FirstRunLock → Auth → SessionLock → RequireMfa → Role → SupplierScope → ApiScope → RateLimit → CSRF → WebAuthnBodyLimit → Routing → BodyParsing → Action
         // → add() v opačném pořadí (innermost první):
         $app->addBodyParsingMiddleware();                            // innermost
         $app->addRoutingMiddleware();
@@ -198,6 +204,8 @@ final class Bootstrap
         $app->add($container->get(SessionLockMiddleware::class));    // autoritativní idle/manual lock browser session
         $app->add($container->get(AuthMiddleware::class));           // načte session nebo bearer token
         $app->add($container->get(FirstRunLockMiddleware::class));   // 423 pokud users prázdná
+        $app->add($container->get(ReviziorServiceAuthMiddleware::class)); // oddělený service assertion, nikdy PAT/session
+        $app->add($container->get(ManagedModeGuardMiddleware::class)); // managed feature/API denylist
         $app->add($container->get(IpAllowlistMiddleware::class));    // outermost user mw
         $app->add(new ApiVersionRewriteMiddleware());                // /api/v1/* → /api/* před vším ostatním
 

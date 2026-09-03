@@ -49,6 +49,8 @@ final class AuthMiddleware implements MiddlewareInterface
         '/api/auth/webauthn/login/verify',
         '/api/auth/forgot',
         '/api/auth/reset',
+        // Vlastní ověření (jednorázový podepsaný ticket) — session teprve vydává.
+        '/api/auth/revizior/sso',
     ];
 
     /**
@@ -80,6 +82,10 @@ final class AuthMiddleware implements MiddlewareInterface
 
     public function process(Request $request, Handler $handler): Response
     {
+        if ($request->getAttribute(ReviziorServiceAuthMiddleware::ATTR_IDENTITY) !== null) {
+            return $handler->handle($request);
+        }
+
         // Resolve locale per-request: user.locale > Accept-Language > default
         Locale::set(self::detectLocale($request->getHeaderLine('Accept-Language')));
 

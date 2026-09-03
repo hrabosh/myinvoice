@@ -33,6 +33,7 @@ final class SendEmailAction
         private readonly PdfArchiveService $pdfArchive,
         private readonly InvoiceAttachmentRepository $attachments,
         private readonly RecipientResolver $recipients,
+        private readonly \MyInvoice\Service\Integration\Revizior\ReviziorInvoiceEventPublisher $reviziorEvents,
     ) {}
 
     public function __invoke(Request $request, Response $response, array $args): Response
@@ -163,6 +164,7 @@ final class SendEmailAction
         $archiveId = $this->pdfArchive->archiveCopy($id, $pdfPath, 'sent', wasSent: true, sentTo: $sentToAll);
 
         $ip = $this->ipMatcher->clientIpFromRequest($request->getServerParams());
+        $this->reviziorEvents->publish($id, \MyInvoice\Service\Integration\Revizior\ReviziorInvoiceEventPublisher::TYPE_SENT);
         $this->logger->log('invoice.sent', $user['id'] ?? null, 'invoice', $id, [
             'to' => $to, 'cc' => $cc, 'bcc' => $bcc,
             'resolved_recipients' => $resolvedRecipients,

@@ -204,6 +204,39 @@ final class Config
     private static function baselineDefaults(): array
     {
         return [
+            'deployment' => [
+                'mode' => 'standalone',
+                'public_name' => 'MyInvoice.cz',
+                'revizior' => [
+                    'app_url' => null,
+                    'allowed_return_hosts' => [],
+                    'service_auth' => [
+                        'issuer' => null,
+                        'audience' => null,
+                        'key_id' => null,
+                        'public_key_path' => null,
+                        // Rotace bez odstávky: mapa kid => cesta k PEM, po dobu
+                        // překryvu platí starý i nový klíč.
+                        'public_keys' => [],
+                        'clock_skew_seconds' => 5,
+                    ],
+                    'sso' => [
+                        'audience' => null,
+                        'key_id' => null,
+                        'public_key_path' => null,
+                        'public_keys' => [],
+                    ],
+                    'allow_insecure_return' => false,
+                    'insecure_return_ports' => [],
+                    'callback' => [
+                        'url' => null,
+                        'key_id' => null,
+                        'private_key_path' => null,
+                        'timeout_seconds' => 10,
+                        'max_attempts' => 12,
+                    ],
+                ],
+            ],
             'session' => [
                 'lock_after_minutes' => 0,
             ],
@@ -257,6 +290,27 @@ final class Config
             'MYINVOICE_SECRET_KEY'  => ['app.secret_encryption_key', 'string'],
             'MYINVOICE_TIMEZONE'    => ['app.timezone', 'string'],
             'MYINVOICE_LOCALE'      => ['app.locale_default', 'string'],
+            'MYINVOICE_DEPLOYMENT_MODE' => ['deployment.mode', 'string'],
+            'MYINVOICE_PUBLIC_NAME' => ['deployment.public_name', 'string'],
+            'MYINVOICE_REVIZIOR_APP_URL' => ['deployment.revizior.app_url', 'string'],
+            'MYINVOICE_REVIZIOR_ALLOWED_RETURN_HOSTS' => ['deployment.revizior.allowed_return_hosts', 'csv'],
+            'MYINVOICE_REVIZIOR_SERVICE_ISSUER' => ['deployment.revizior.service_auth.issuer', 'string'],
+            'MYINVOICE_REVIZIOR_SERVICE_AUDIENCE' => ['deployment.revizior.service_auth.audience', 'string'],
+            'MYINVOICE_REVIZIOR_SERVICE_KEY_ID' => ['deployment.revizior.service_auth.key_id', 'string'],
+            'MYINVOICE_REVIZIOR_SERVICE_PUBLIC_KEY' => ['deployment.revizior.service_auth.public_key_path', 'string'],
+            'MYINVOICE_REVIZIOR_SERVICE_CLOCK_SKEW' => ['deployment.revizior.service_auth.clock_skew_seconds', 'int'],
+            'MYINVOICE_REVIZIOR_SSO_AUDIENCE' => ['deployment.revizior.sso.audience', 'string'],
+            'MYINVOICE_REVIZIOR_SSO_KEY_ID' => ['deployment.revizior.sso.key_id', 'string'],
+            'MYINVOICE_REVIZIOR_SSO_PUBLIC_KEY' => ['deployment.revizior.sso.public_key_path', 'string'],
+            'MYINVOICE_REVIZIOR_SERVICE_PUBLIC_KEYS' => ['deployment.revizior.service_auth.public_keys', 'json_map'],
+            'MYINVOICE_REVIZIOR_SSO_PUBLIC_KEYS' => ['deployment.revizior.sso.public_keys', 'json_map'],
+            'MYINVOICE_REVIZIOR_ALLOW_INSECURE_RETURN' => ['deployment.revizior.allow_insecure_return', 'bool'],
+            'MYINVOICE_REVIZIOR_INSECURE_RETURN_PORTS' => ['deployment.revizior.insecure_return_ports', 'csv'],
+            'MYINVOICE_REVIZIOR_CALLBACK_URL' => ['deployment.revizior.callback.url', 'string'],
+            'MYINVOICE_REVIZIOR_CALLBACK_KEY_ID' => ['deployment.revizior.callback.key_id', 'string'],
+            'MYINVOICE_REVIZIOR_CALLBACK_PRIVATE_KEY' => ['deployment.revizior.callback.private_key_path', 'string'],
+            'MYINVOICE_REVIZIOR_CALLBACK_TIMEOUT' => ['deployment.revizior.callback.timeout_seconds', 'int'],
+            'MYINVOICE_REVIZIOR_CALLBACK_MAX_ATTEMPTS' => ['deployment.revizior.callback.max_attempts', 'int'],
 
             // Database (jednotlivé klíče i kompozitní DATABASE_URL)
             'MYINVOICE_DB_HOST'    => ['db.host', 'string'],
@@ -391,6 +445,7 @@ final class Config
             'int'        => (int) $raw,
             'lock_timeout' => self::castSessionLockTimeoutEnv($raw),
             'csv'        => self::castCsvEnv($raw),
+            'json_map'   => self::castJsonMapEnv($raw),
             'float'      => (float) $raw,
             default      => $raw,
         };
@@ -406,6 +461,29 @@ final class Config
         // Zámek je volitelná ochrana. Neplatnou hodnotu ponecháme policy
         // vrstvě, která ji fail-soft vypne a vystaví diagnostiku v health.
         return $value;
+    }
+
+    /**
+     * Mapa `kid => cesta` z JSON řetězce. Neplatný JSON se ignoruje: kdyby
+     * shodil start, překlep v rotaci by shodil celou instalaci — a jediný
+     * dopad prázdné mapy je, že klíč navíc neplatí.
+     *
+     * @return array<string, string>
+     */
+    private static function castJsonMapEnv(string $raw): array
+    {
+        $decoded = json_decode(trim($raw), true);
+        if (!is_array($decoded)) {
+            return [];
+        }
+        $map = [];
+        foreach ($decoded as $keyId => $path) {
+            if (is_string($keyId) && is_string($path) && trim($keyId) !== '' && trim($path) !== '') {
+                $map[trim($keyId)] = trim($path);
+            }
+        }
+
+        return $map;
     }
 
     /**
@@ -444,6 +522,7 @@ final class Config
         'smtp.dkim.private_key_path',
         'smtp.dkim.public_key_path',
         'smtp.dkim.dns_doc_path',
+        'deployment.revizior.service_auth.public_key_path',
     ];
 
     private static function anchorRelativePaths(array $data, string $rootDir): array

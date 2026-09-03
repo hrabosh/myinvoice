@@ -14,6 +14,34 @@ cd myinvoice
 Pak si vyber variantu podle toho, jestli chceš stavět image lokálně, nebo
 si stáhnout pre-built z GHCR.
 
+## 3.0 Lokální propojení s ReviziOR backendem
+
+Pokud vedle tohoto repozitáře běží ReviziOR backend v Docker Compose síti
+`backend_revizor`, spusť:
+
+```bash
+cmd/docker-revizior-local.sh
+```
+
+Na Windows použij:
+
+```powershell
+.\cmd\docker-revizior-local.ps1
+```
+
+Fakturace bude dostupná v prohlížeči na `http://localhost:8082`. Backend kontejner
+ji uvidí pod stabilní adresou `http://revizior-invoice.local`. Jinou síť nebo port lze
+zadat přes `REVIZIOR_DOCKER_NETWORK` a `APP_PORT`.
+
+Síťové propojení samo integrační endpointy nezapíná. Pro vývoj běžného standalone
+MyInvoice ponech `MYINVOICE_DEPLOYMENT_MODE=standalone`. Pro integrační vývoj nastav
+`MYINVOICE_DEPLOYMENT_MODE=revizior_managed` a nakonfiguruj issuer, audience, `kid` a
+veřejný service klíč podle `source/revizior-integration/r2-service-foundation.md`.
+Service auth, capability probe, provisioning a synchronizace organizace jsou dostupné.
+Endpointy členství uživatelů vyžadují dedicated scope `user:write` a backend je začne používat
+až po zapnutí capability `userProvisioning`; SSO a fakturační endpointy zůstávají vypnuté,
+dokud je capabilities neinzerují.
+
 ## 3.1 Varianta A — pre-built image z GHCR (rychlejší, bez local buildu)
 
 Stáhne hotový multi-arch image (`ghcr.io/radekhulan/myinvoice:latest`,

@@ -39,10 +39,12 @@ if [[ ! -f .env ]]; then
   echo "==> Generating .env with random DB password…"
   DB_ROOT_PASSWORD=$(openssl rand -base64 24 | tr -d '=+/' | head -c 28)
   DB_PASSWORD=$(openssl rand -base64 24      | tr -d '=+/' | head -c 28)
+  LOCAL_APP_PORT="${APP_PORT:-8080}"
+  LOCAL_DB_PORT="${DB_PORT:-3307}"
   cat > .env <<EOF
 # MyInvoice.cz — Docker compose env (gitignored)
-APP_PORT=8080
-DB_PORT=3307
+APP_PORT=${LOCAL_APP_PORT}
+DB_PORT=${LOCAL_DB_PORT}
 DB_NAME=myinvoice
 DB_USER=myinvoice
 DB_ROOT_PASSWORD=${DB_ROOT_PASSWORD}
@@ -130,7 +132,7 @@ if [[ "$MODE" == "registry" ]]; then
 fi
 
 if [[ "$MODE" == "source" ]]; then
-  if ! docker image inspect myinvoice:latest >/dev/null 2>&1; then
+  if [[ "$FORCE_BUILD" == "1" ]] || ! docker image inspect myinvoice:latest >/dev/null 2>&1; then
     echo "==> Building image…"
     "${DC[@]}" build app
   fi

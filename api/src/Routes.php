@@ -56,6 +56,7 @@ use MyInvoice\Action\Settings\SettingsAction;
 use MyInvoice\Action\Settings\SignatureDocumentSelectionAction;
 use MyInvoice\Action\Settings\SigningProfilesAction;
 use MyInvoice\Action\Settings\SupplierInvoiceCounterAction;
+use MyInvoice\Action\Settings\SupplierMembersAction;
 use MyInvoice\Action\Bank\BankEmailNoticeAction;
 use MyInvoice\Action\Bank\BankStatementAction;
 use MyInvoice\Action\Dashboard\SummaryAction;
@@ -175,6 +176,15 @@ use MyInvoice\Action\Document\DocumentJobsAction;
 use MyInvoice\Action\System\HealthAction;
 use MyInvoice\Action\System\OpenApiAction;
 use MyInvoice\Action\System\VersionAction;
+use MyInvoice\Action\Revizior\ReviziorCapabilitiesAction;
+use MyInvoice\Action\Revizior\ProvisionReviziorOrganizationAction;
+use MyInvoice\Action\Revizior\SyncReviziorOrganizationAction;
+use MyInvoice\Action\Revizior\SyncReviziorUserAction;
+use MyInvoice\Action\Revizior\SyncReviziorClientAction;
+use MyInvoice\Action\Revizior\CreateReviziorInvoiceDraftAction;
+use MyInvoice\Action\Revizior\GetReviziorInvoiceAction;
+use MyInvoice\Action\Revizior\ReviziorSsoAction;
+use MyInvoice\Action\Revizior\PutReviziorInvoiceAttachmentAction;
 use MyInvoice\Action\Admin\MyuctoUpgradeAction;
 use MyInvoice\Action\Admin\UpdateAction;
 use Slim\App;
@@ -185,6 +195,41 @@ final class Routes
     {
         $app->get('/api/health',  HealthAction::class);
         $app->get('/api/version', VersionAction::class);
+        $app->get('/api/integrations/revizior/v1/capabilities', ReviziorCapabilitiesAction::class);
+        $app->post(
+            '/api/integrations/revizior/v1/organizations/{organizationUuid}/provision',
+            ProvisionReviziorOrganizationAction::class,
+        );
+        $app->put(
+            '/api/integrations/revizior/v1/organizations/{organizationUuid}',
+            SyncReviziorOrganizationAction::class,
+        );
+        $app->put(
+            '/api/integrations/revizior/v1/organizations/{organizationUuid}/users/{userUuid}',
+            [SyncReviziorUserAction::class, 'upsert'],
+        );
+        $app->delete(
+            '/api/integrations/revizior/v1/organizations/{organizationUuid}/users/{userUuid}',
+            [SyncReviziorUserAction::class, 'revoke'],
+        );
+        $app->put(
+            '/api/integrations/revizior/v1/organizations/{organizationUuid}/clients/{clientUuid}',
+            SyncReviziorClientAction::class,
+        );
+        $app->post(
+            '/api/integrations/revizior/v1/organizations/{organizationUuid}/invoice-drafts',
+            CreateReviziorInvoiceDraftAction::class,
+        );
+        $app->get(
+            '/api/integrations/revizior/v1/organizations/{organizationUuid}/invoices/{externalInvoiceKey}',
+            GetReviziorInvoiceAction::class,
+        );
+        $app->put(
+            '/api/integrations/revizior/v1/organizations/{organizationUuid}/invoice-drafts/{externalInvoiceKey}/attachments/{externalAttachmentKey}',
+            PutReviziorInvoiceAttachmentAction::class,
+        );
+        // Mimo service API base path: sem chodí prohlížeč s jednorázovým ticketem.
+        $app->get('/api/auth/revizior/sso', ReviziorSsoAction::class);
 
         // Public REST API v1 — dokumentace
         $app->get('/api/openapi.yaml', [OpenApiAction::class, 'spec']);
@@ -348,6 +393,7 @@ final class Routes
         $app->get    ('/api/invoices/export',       ExportAction::class);
         $app->get    ('/api/invoices/preview-varsymbol', PreviewVarsymbolAction::class);
         $app->post   ('/api/invoices',              CreateInvoiceAction::class);
+        $app->get   ('/api/invoices/{id:[0-9]+}/revizior-sources', \MyInvoice\Action\Invoice\ReviziorSourcesAction::class);
         $app->get    ('/api/invoices/{id:[0-9]+}',  GetInvoiceAction::class);
         $app->get    ('/api/invoices/{id:[0-9]+}/activity', InvoiceActivityAction::class);
         $app->put    ('/api/invoices/{id:[0-9]+}',  UpdateInvoiceAction::class);
@@ -604,6 +650,9 @@ final class Routes
         $app->get ('/api/settings/supplier',                [SettingsAction::class, 'getSupplier']);
         $app->put ('/api/settings/supplier',                [SettingsAction::class, 'updateSupplier']);
         $app->put ('/api/settings/supplier/invoice-counter', SupplierInvoiceCounterAction::class);
+        $app->get   ('/api/settings/supplier/members', [SupplierMembersAction::class, 'list']);
+        $app->put   ('/api/settings/supplier/members/{userId:[0-9]+}', [SupplierMembersAction::class, 'update']);
+        $app->delete('/api/settings/supplier/members/{userId:[0-9]+}', [SupplierMembersAction::class, 'delete']);
         $app->get ('/api/settings/nace-codes',              NaceCodesAction::class);
         $app->get    ('/api/settings/email-profiles',       [EmailProfilesAction::class, 'list']);
         $app->post   ('/api/settings/email-profiles',       [EmailProfilesAction::class, 'create']);

@@ -1,0 +1,25 @@
+{
+  "specVersion": "1.0",
+  "organization": {
+    "name": "Example Revize s.r.o.",
+    "registrationNumber": "00000019",
+    "vatNumber": null,
+    "vatStatus": null,
+    "address": {
+      "street": "Testovací 1",
+      "city": "Brno",
+      "postalCode": "60200",
+      "countryCode": "CZ"
+    },
+    "language": "cs",
+    "active": true,
+    "sourceUpdatedAt": "2026-08-30T18:00:00Z"
+  },
+  "owner": {
+    "userUuid": "20000000-0000-4000-8000-000000000001",
+    "email": "owner@example.invalid",
+    "name": "Testovací vlastník",
+    "role": "supplier_owner",
+    "active": true
+  }
+}

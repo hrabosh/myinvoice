@@ -52,6 +52,7 @@ final class DeleteInvoiceAction
         private readonly InvoiceAttachmentRepository $attachments,
         private readonly StatsRecomputer $stats,
         private readonly VarsymbolGenerator $varsymbol,
+        private readonly \MyInvoice\Service\Integration\Revizior\ReviziorInvoiceEventPublisher $reviziorEvents,
     ) {}
 
     public function __invoke(Request $request, Response $response, array $args): Response
@@ -137,6 +138,9 @@ final class DeleteInvoiceAction
 
         // 2. Vlastní delete (CASCADE smaže items, work_reports, child invoices,
         //    invoice_pdfs, invoice_attachments — vše nahoru na FK invoice_id)
+        // Událost musí vzniknout PŘED smazáním: `revizior_invoice_links` má FK
+        // na doklad, takže po `delete()` už není z čeho snapshot postavit.
+        $this->reviziorEvents->publish($id, \MyInvoice\Service\Integration\Revizior\ReviziorInvoiceEventPublisher::TYPE_DELETED_DRAFT);
         $this->repo->delete($id);
 
         // 3. Recompute revenue stats (po smazání issued/sent/paid se mění agregát)

@@ -1,0 +1,13 @@
+{
+  "specVersion": "1.0",
+  "data": {
+    "clientUuid": "40000000-0000-4000-8000-000000000001",
+    "externalClientId": "456",
+    "operation": "created",
+    "payloadHash": "sha256:d3e4df6808108e3025ca72bcabde89fa4bba566543bc0ceae96911daece23c70"
+  },
+  "meta": {
+    "contractVersion": "1.0",
+    "requestId": "10000000-0000-4000-8000-000000000003"
+  }
+}

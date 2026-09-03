@@ -8,6 +8,17 @@ on:
   workflow_dispatch:
 
 jobs:
+  revizior-contract:
+    name: ReviziOR contract v1
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Validate OpenAPI, refs and canonical fixtures
+        run: python3 tools/validateReviziorContract.py
+
   backend:
     name: Backend (PHP 8.5 + PHPUnit)
     runs-on: ubuntu-latest
@@ -117,6 +128,12 @@ jobs:
         env:
           MYINVOICE_TEST_URL: http://127.0.0.1:8080
         run: vendor/bin/phpunit --no-coverage
+
+      # R0 baseline: projekt dosud neměl phpstan.neon. Level 0 je explicitní
+      # opakovatelný start; zpřísnění patří do samostatných malých PR.
+      - name: Run PHPStan baseline
+        working-directory: api
+        run: vendor/bin/phpstan analyse src --level=0 --no-progress --memory-limit=1G
 
   frontend:
     name: Frontend (Vue + TypeScript)

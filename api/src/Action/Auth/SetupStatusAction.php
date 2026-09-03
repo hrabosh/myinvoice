@@ -9,6 +9,7 @@ use MyInvoice\Infrastructure\Config\Config;
 use MyInvoice\Middleware\FirstRunLockMiddleware;
 use MyInvoice\Service\Auth\MfaPolicyService;
 use MyInvoice\Service\Auth\PasskeyService;
+use MyInvoice\Service\Deployment\DeploymentCapabilities;
 use Psr\Http\Message\ResponseInterface as Response;
 use Psr\Http\Message\ServerRequestInterface as Request;
 
@@ -23,15 +24,17 @@ final class SetupStatusAction
         private readonly Config $config,
         private readonly PasskeyService $passkeys,
         private readonly MfaPolicyService $mfaPolicy,
+        private readonly DeploymentCapabilities $capabilities,
     ) {}
 
     public function __invoke(Request $request, Response $response): Response
     {
-        return Json::ok($response, [
+        return Json::ok($response, array_merge([
             'needs_setup' => $this->lockProbe->needsSetup(),
             'version'     => '0.1.0',
             'passwordless_login_enabled' =>
-                (bool) $this->config->get('auth.passwordless_login.enabled', false)
+                $this->capabilities->allowsLocalPasswordLogin()
+                && (bool) $this->config->get('auth.passwordless_login.enabled', false)
                 && $this->passkeys->isAvailable()
                 && $this->mfaPolicy->isMethodAllowed('passkey'),
             'captcha'     => [
@@ -39,6 +42,6 @@ final class SetupStatusAction
                 'site_key'   => $this->config->get('captcha.site_key', ''),
                 'script_url' => $this->config->get('captcha.script_url', ''),
             ],
-        ]);
+        ], $this->capabilities->publicPayload()));
     }
 }

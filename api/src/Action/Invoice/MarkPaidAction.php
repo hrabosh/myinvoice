@@ -30,6 +30,7 @@ final class MarkPaidAction
         private readonly InvoicePdfRenderer $pdf,
         private readonly PaymentThanksMailer $paymentThanks,
         private readonly InvoicePaymentService $payments,
+        private readonly \MyInvoice\Service\Integration\Revizior\ReviziorInvoiceEventPublisher $reviziorEvents,
     ) {}
 
     public function __invoke(Request $request, Response $response, array $args): Response
@@ -81,6 +82,7 @@ final class MarkPaidAction
         }
 
         $ip = $this->ipMatcher->clientIpFromRequest($request->getServerParams());
+        $this->reviziorEvents->publish($id, \MyInvoice\Service\Integration\Revizior\ReviziorInvoiceEventPublisher::TYPE_PAID);
         $this->logger->log('invoice.paid', $user['id'] ?? null, 'invoice', $id, [
             'paid_at' => $paidAt,
         ], $ip, $request->getHeaderLine('User-Agent'));

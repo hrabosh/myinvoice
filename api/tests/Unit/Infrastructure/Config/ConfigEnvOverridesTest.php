@@ -129,6 +129,40 @@ PHP);
         self::assertFalse($cfg->get('auth.passwordless_login.enabled'));
     }
 
+    public function testManagedDeploymentEnvironmentOverridesApply(): void
+    {
+        $this->setEnv('MYINVOICE_DEPLOYMENT_MODE', 'revizior_managed');
+        $this->setEnv('MYINVOICE_PUBLIC_NAME', 'ReviziOR Fakturace');
+        $this->setEnv('MYINVOICE_REVIZIOR_APP_URL', 'https://app.revizior.cz/fakturace');
+        $this->setEnv('MYINVOICE_REVIZIOR_ALLOWED_RETURN_HOSTS', ' app.revizior.cz,admin.revizior.cz ');
+        $this->setEnv('MYINVOICE_REVIZIOR_SERVICE_ISSUER', 'https://app.revizior.cz');
+        $this->setEnv('MYINVOICE_REVIZIOR_SERVICE_AUDIENCE', 'https://invoice.example/api/integrations/revizior/v1');
+        $this->setEnv('MYINVOICE_REVIZIOR_SERVICE_KEY_ID', 'service-2026-01');
+        $this->setEnv('MYINVOICE_REVIZIOR_SERVICE_PUBLIC_KEY', 'private/revizior-service.pub');
+        $this->setEnv('MYINVOICE_REVIZIOR_SERVICE_CLOCK_SKEW', '7');
+
+        $cfg = Config::load($this->tmpDir);
+
+        self::assertSame('revizior_managed', $cfg->get('deployment.mode'));
+        self::assertSame('ReviziOR Fakturace', $cfg->get('deployment.public_name'));
+        self::assertSame('https://app.revizior.cz/fakturace', $cfg->get('deployment.revizior.app_url'));
+        self::assertSame(
+            ['app.revizior.cz', 'admin.revizior.cz'],
+            $cfg->get('deployment.revizior.allowed_return_hosts'),
+        );
+        self::assertSame('https://app.revizior.cz', $cfg->get('deployment.revizior.service_auth.issuer'));
+        self::assertSame(
+            'https://invoice.example/api/integrations/revizior/v1',
+            $cfg->get('deployment.revizior.service_auth.audience'),
+        );
+        self::assertSame('service-2026-01', $cfg->get('deployment.revizior.service_auth.key_id'));
+        self::assertSame(
+            $this->tmpDir . DIRECTORY_SEPARATOR . 'private/revizior-service.pub',
+            $cfg->get('deployment.revizior.service_auth.public_key_path'),
+        );
+        self::assertSame(7, $cfg->get('deployment.revizior.service_auth.clock_skew_seconds'));
+    }
+
     public function testInvalidSessionLockEnvironmentOverrideIsPreservedForPolicyValidation(): void
     {
         $this->setEnv('MYINVOICE_SESSION_LOCK_AFTER_MINUTES', '15 minutes');

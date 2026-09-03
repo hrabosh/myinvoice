@@ -1,0 +1,15 @@
+{
+  "specVersion": "1.0",
+  "error": {
+    "code": "invoice_validation_failed",
+    "message": "Požadavek nelze zpracovat.",
+    "fields": {
+      "items.0.quantity": "required"
+    },
+    "retryable": false
+  },
+  "meta": {
+    "contractVersion": "1.0",
+    "requestId": "10000000-0000-4000-8000-000000000006"
+  }
+}

@@ -183,6 +183,7 @@ Success:
 
 ```json
 {
+  "specVersion": "1.0",
   "data": {},
   "meta": {
     "contractVersion": "1.0",
@@ -195,6 +196,7 @@ Error:
 
 ```json
 {
+  "specVersion": "1.0",
   "error": {
     "code": "validation_failed",
     "message": "Požadavek nelze zpracovat.",
@@ -207,6 +209,10 @@ Error:
   }
 }
 ```
+
+Všechny v1 JSON requesty, response a eventy nesou top-level `specVersion: "1.0"`. Je to
+explicitní discriminator kontraktních fixtures; `meta.contractVersion` navíc identifikuje
+skutečně obslouženou verzi provideru a zůstává součástí response obálky.
 
 Stabilní kódy minimálně:
 
@@ -251,6 +257,7 @@ Response:
 
 ```json
 {
+  "specVersion": "1.0",
   "data": {
     "contractVersion": "1.0",
     "deploymentMode": "revizior_managed",
@@ -292,6 +299,7 @@ Payload:
 
 ```json
 {
+  "specVersion": "1.0",
   "organization": {
     "name": "Revize Elektro s.r.o.",
     "registrationNumber": "12345678",
@@ -324,6 +332,7 @@ Response:
 
 ```json
 {
+  "specVersion": "1.0",
   "data": {
     "organizationUuid": "...",
     "supplierId": "123",
@@ -374,6 +383,7 @@ Payload používá explicitní pole a nullable hodnoty. Response:
 
 ```json
 {
+  "specVersion": "1.0",
   "data": {
     "clientUuid": "...",
     "externalClientId": "456",
@@ -404,6 +414,7 @@ Request:
 
 ```json
 {
+  "specVersion": "1.0",
   "clientUuid": "...",
   "currency": "CZK",
   "rateDate": "2026-08-30",
@@ -475,6 +486,7 @@ hodnoty jsou JSON stringy, nikoli float. MyInvoice znovu provede plnou validaci 
 
 ```json
 {
+  "specVersion": "1.0",
   "externalInvoiceKey": "...",
   "invoiceId": "789",
   "invoiceNumber": null,

@@ -11,7 +11,9 @@ use MyInvoice\Middleware\AuthMiddleware;
 use MyInvoice\Middleware\SupplierScopeMiddleware;
 use MyInvoice\Repository\PasskeyCredentialRepository;
 use MyInvoice\Service\Auth\MfaPolicyService;
+use MyInvoice\Service\Auth\PermissionPolicy;
 use MyInvoice\Service\Auth\SessionLockPolicy;
+use MyInvoice\Service\Deployment\DeploymentCapabilities;
 use Psr\Clock\ClockInterface;
 use Psr\Http\Message\ResponseInterface as Response;
 use Psr\Http\Message\ServerRequestInterface as Request;
@@ -26,6 +28,8 @@ final class MeAction
         private readonly MfaPolicyService $mfaPolicy,
         private readonly SessionLockPolicy $lockPolicy,
         private readonly ClockInterface $clock,
+        private readonly DeploymentCapabilities $capabilities,
+        private readonly PermissionPolicy $permissions,
     ) {}
 
     public function __invoke(Request $request, Response $response): Response
@@ -35,14 +39,18 @@ final class MeAction
         $currentSupplierId = (int) $request->getAttribute(SupplierScopeMiddleware::ATTR_CURRENT_ID, 0);
 
         // Membership filtr (zrcadlí SettingsAction::listSuppliers) — přepínač firem
-        // smí nabídnout jen přiřazené firmy. Globální admin a uživatel bez
-        // membershipu vidí všechny (BC).
-        $allowed = ($user['role'] ?? '') === 'admin'
+        // smí nabídnout jen přiřazené firmy. Globální admin a standalone
+        // uživatel bez membershipu vidí všechny (BC); managed non-admin bez
+        // membershipu nedostane žádný tenant.
+        $platformRole = (string) ($user['platform_role'] ?? $user['role'] ?? '');
+        $allowed = $platformRole === 'admin'
             ? []
             : $this->userSuppliers->allowedSupplierIds((int) ($user['id'] ?? 0));
         $where  = '';
         $params = [];
-        if ($allowed !== []) {
+        if ($this->capabilities->isReviziorManaged() && $platformRole !== 'admin' && $allowed === []) {
+            $where = ' WHERE 1 = 0';
+        } elseif ($allowed !== []) {
             $where  = ' WHERE id IN (' . implode(',', array_fill(0, count($allowed), '?')) . ')';
             $params = $allowed;
         }
@@ -108,13 +116,20 @@ final class MeAction
                 ? self::isoUtc($lastActivity->modify(sprintf('+%d minutes', $effectiveTimeout)))
                 : null;
         }
+        $permissions = $this->capabilities->isReviziorManaged()
+            && $platformRole !== 'admin'
+            && $currentSupplierId <= 0
+                ? []
+                : $this->permissions->permissions($request);
 
-        return Json::ok($response, [
+        return Json::ok($response, array_merge([
             'user' => [
                 'id'              => $userId,
                 'email'           => $user['email'] ?? '',
                 'name'            => $user['name'] ?? '',
                 'role'            => $user['role'] ?? 'readonly',
+                'platform_role'   => $platformRole,
+                'supplier_role'   => $user['supplier_role'] ?? null,
                 'locale'          => $user['locale'] ?? 'cs',
                 'totp_enabled'    => $totpEnabled,
                 'must_setup_totp' => $mustSetupTotp,
@@ -133,7 +148,25 @@ final class MeAction
             'lock_after_minutes'  => $effectiveTimeout,
             'server_time'         => self::isoUtc($now),
             'idle_expires_at'     => $idleExpiresAt,
-        ]);
+            'permissions'         => $permissions,
+        ], $this->capabilities->publicPayload(), $this->sessionReturnUrl($session)));
+    }
+
+    /**
+     * Návrat do ReviziORu podle **této** session, ne podle query stringu.
+     *
+     * Uloží ji jen SSO přechod, a to až po ověření allowlistu originů. Session
+     * bez ní (standalone login) nechává hodnotu z konfigurace.
+     *
+     * @param array<string,mixed> $session
+     *
+     * @return array{returnUrl?:string}
+     */
+    private function sessionReturnUrl(array $session): array
+    {
+        $returnUrl = $session['revizior_return_url'] ?? null;
+
+        return is_string($returnUrl) && $returnUrl !== '' ? ['returnUrl' => $returnUrl] : [];
     }
 
     private static function tryParseUtc(string $time): ?\DateTimeImmutable

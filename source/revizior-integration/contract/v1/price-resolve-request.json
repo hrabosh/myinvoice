@@ -1,0 +1,14 @@
+{
+  "specVersion": "1.0",
+  "clientUuid": "40000000-0000-4000-8000-000000000001",
+  "currency": "CZK",
+  "rateDate": "2026-08-30",
+  "pricesIncludeVat": false,
+  "items": [
+    {
+      "lineKey": "50000000-0000-4000-8000-000000000001",
+      "code": "REV_ELEKTRO_ZAKLAD",
+      "quantity": "1.000"
+    }
+  ]
+}

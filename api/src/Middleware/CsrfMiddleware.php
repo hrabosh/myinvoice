@@ -44,6 +44,10 @@ final class CsrfMiddleware implements MiddlewareInterface
 
     public function process(Request $request, Handler $handler): Response
     {
+        if ($request->getAttribute(ReviziorServiceAuthMiddleware::ATTR_IDENTITY) !== null) {
+            return $handler->handle($request);
+        }
+
         $method = strtoupper($request->getMethod());
         if (in_array($method, self::SAFE_METHODS, true)) {
             return $handler->handle($request);

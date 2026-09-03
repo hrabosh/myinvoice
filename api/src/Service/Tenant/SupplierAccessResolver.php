@@ -8,6 +8,7 @@ use MyInvoice\Infrastructure\Database\Connection;
 use MyInvoice\Middleware\AuthMiddleware;
 use MyInvoice\Middleware\SupplierScopeMiddleware;
 use MyInvoice\Repository\UserSupplierRepository;
+use MyInvoice\Service\Deployment\DeploymentCapabilities;
 use Psr\Http\Message\ServerRequestInterface as Request;
 
 /**
@@ -20,8 +21,8 @@ use Psr\Http\Message\ServerRequestInterface as Request;
  *   - globální admin (users.role = 'admin'): bez omezení, vidí všechny firmy,
  *     per-supplier override se NEaplikuje (admin je důvěryhodný celoinstančně;
  *     jinak by si membershipem nebo readonly override sám sebe zamkl z /api/admin/*)
- *   - uživatel BEZ membership řádků = bez omezení (dosavadní chování, BC —
- *     po nasazení se stávající instalaci nic nemění)
+ *   - standalone uživatel BEZ membership řádků = bez omezení (dosavadní BC)
+ *   - managed non-admin BEZ membership řádků = denied (tenant fail-closed)
  *   - uživatel S membership: explicitní požadavek na cizí firmu → denied
  *     (middleware vrací 403); bez explicitního požadavku fallback na nejnižší
  *     PŘIŘAZENÝ supplier (ne globální MIN — ten může patřit cizí firmě)
@@ -44,6 +45,7 @@ final class SupplierAccessResolver
     public function __construct(
         private readonly Connection $db,
         private readonly UserSupplierRepository $memberships,
+        private readonly DeploymentCapabilities $capabilities,
     ) {}
 
     public function resolve(Request $request): SupplierAccess
@@ -55,7 +57,7 @@ final class SupplierAccessResolver
         // a to se override změnit nemůže (ENUM v user_suppliers 'admin' nemá
         // a RoleMiddleware ho navíc stropuje na 'accountant'). Klíč memo je proto
         // stabilní i po přepisu role.
-        $isAdmin = ($user['role'] ?? '') === 'admin';
+        $isAdmin = ($user['platform_role'] ?? $user['role'] ?? '') === 'admin';
 
         // 0. Bearer (API token) bound na konkrétní supplier — forcuj ho, ignoruj
         //    header/query (token nesmí "skočit" do jiné firmy).
@@ -72,9 +74,9 @@ final class SupplierAccessResolver
     }
 
     /**
-     * PAT bound na supplier_id. Globální admin i uživatel bez membershipu ho
-     * dostane bez omezení; uživatel s membershipem jen když je bound supplier
-     * v jeho přiřazených firmách (jinak denied — token nesmí obejít membership).
+     * PAT bound na supplier_id. Globální admin ho dostane bez omezení; standalone
+     * uživatel bez membershipu zachovává BC. Managed uživatel bez membershipu a
+     * uživatel s tokenem mimo přiřazenou firmu jsou denied.
      */
     private function resolveBound(int $userId, bool $isAdmin, int $sid): SupplierAccess
     {
@@ -83,6 +85,9 @@ final class SupplierAccessResolver
         }
         $assignments = $this->assignmentsFor($userId);
         if ($assignments === []) {
+            if ($this->capabilities->isReviziorManaged()) {
+                return new SupplierAccess($sid, true, null);
+            }
             return new SupplierAccess($sid, false, null);
         }
         if (!array_key_exists($sid, $assignments)) {
@@ -101,8 +106,13 @@ final class SupplierAccessResolver
 
         $assignments = $this->assignmentsFor($userId);
 
-        // Bez membership řádků = bez omezení (BC — dosavadní chování vč. MIN fallbacku).
+        // Standalone bez membership řádků = bez omezení (BC). Managed customer
+        // bez explicitního membershipu musí failnout zavřeně; výjimkou je jen
+        // globální platform admin obsloužený výše.
         if ($assignments === []) {
+            if ($this->capabilities->isReviziorManaged()) {
+                return new SupplierAccess($requested, true, null);
+            }
             return new SupplierAccess($this->resolveExisting($requested), false, null);
         }
 

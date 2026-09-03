@@ -1,5 +1,8 @@
 # 40. Aktualizace na novou verzi
 
+> 🛈 V řízené instalaci **ReviziOR Fakturace** spravuje verzi provozní CI/CD.
+> In-app aktualizace i přechod na MyÚčto jsou v API a navigaci vypnuté.
+
 MyInvoice.cz denně kontroluje GitHub Releases API a v Systém → **Aktualizace**
 (jen admin) zobrazí aktuální i poslední dostupnou verzi spolu s release
 notes. Aplikaci se updatuje buď z UI (jedním tlačítkem), nebo ručně přes
