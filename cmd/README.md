@@ -331,3 +331,9 @@ access (smoke check že middleware blokuje bez session).
 - **PROJECT_ROOT** vždy resolvuju z `dirname` skriptu — žádné absolutní cesty
   v kódu.
 - **Žádný `cd $HOME`** — pracuje se relativně k umístění skriptu, ne CWD volajícího.
+
+### Lokální vývoj
+
+| Skript | Co dělá |
+|---|---|
+| `local-test.sh` | Spustí libovolný příkaz (PHPUnit, PHPStan, `bin/migrate.php`) v PHP 8.5 kontejneru nad tímto checkoutem, připojeném k DB stacku z `docker-compose.yml`; testy čtou `cfg.php` v kořeni repa jako v CI |

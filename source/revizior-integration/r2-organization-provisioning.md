@@ -56,8 +56,9 @@ Po dokončení endpointu provider inzeruje:
 {"organizationProvisioning": true}
 ```
 
-`userProvisioning`, `sso`, `clientUpsert`, `invoiceDraft` a ostatní navazující funkce zůstávají
-`false`, dokud neprojdou vlastními end-to-end slice a cross-repo smoke testem.
+`sso`, `clientUpsert`, `invoiceDraft` a ostatní navazující funkce zůstávají `false`, dokud
+neprojdou vlastními end-to-end slice a cross-repo smoke testem; `userProvisioning` tím prošel
+2026-09-02 (viz [`r2-tenant-synchronization.md`](r2-tenant-synchronization.md)).
 
 ## Ověření
 
@@ -71,5 +72,5 @@ Po dokončení endpointu provider inzeruje:
 ## Další krok
 
 Organization update a samostatný user upsert/revoke jsou implementované v navazujícím
-[`r2-tenant-synchronization.md`](r2-tenant-synchronization.md). `userProvisioning` zůstává
-vypnutý do consumer přechodu z obecného `organization:write` na dedicated `user:write` scope.
+[`r2-tenant-synchronization.md`](r2-tenant-synchronization.md), včetně výsledku cross-repo
+smoke testu, po kterém je `userProvisioning` zapnutý.

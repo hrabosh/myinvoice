@@ -1,6 +1,6 @@
 # ReviziOR managed integrace
 
-> **Stav:** 🟡 R0–R1 a R2 provider tenant synchronization implementovány; user capability čeká na consumer scope
+> **Stav:** 🟢 R0–R6 hotové; inzerovány všechny schopnosti kromě `priceResolution`, `proforma`, `creditNote` a `partialPayments` (2026-09-03); zbývá R7 hardening a cutover
 > **Rozhodnutí:** 2026-08-30  
 > **Provider repozitář:** `hrabosh/myinvoice`  
 > **Consumer repozitář:** `hrabosh/backend`  

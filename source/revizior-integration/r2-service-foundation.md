@@ -43,16 +43,18 @@ odstraněna po úspěšném cross-repo handshake testu.
 
 ## Další slice R2
 
-1. doplnit v consumeru dedicated `user:write` scope a dokončit cross-repo membership smoke;
-2. zapnout `userProvisioning` a spustit consumer backfill;
-3. migration integrační testy pro clean DB, upgrade a souběh;
-4. SSO ticket s odděleným audience a signing key;
-5. capability `sso` zapnout až po
+1. ~~doplnit v consumeru dedicated `user:write` scope a dokončit cross-repo membership smoke~~ — hotovo 2026-09-02;
+2. ~~zapnout `userProvisioning`~~ — hotovo; consumer backfill přes `revizior:invoicing:sync-members`;
+3. ~~R3: upsert klienta, koncept dokladu, reconciliation read~~ — hotovo 2026-09-02, viz [`r3-client-upsert.md`](r3-client-upsert.md) a [`r3-invoice-draft.md`](r3-invoice-draft.md);
+4. migration integrační testy pro clean DB, upgrade a souběh;
+5. SSO ticket s odděleným audience a signing key;
+6. capability `sso` zapnout až po
    zeleném cross-repo smoke testu.
 
-Organization provisioning je dostupný a organization update je implementovaný. User endpointy
-jsou hotové s kanonickým `user:write`, ale backend je stále nesmí používat, dokud provider po
-consumer scope opravě neinzeruje `userProvisioning`. SSO ani fakturace zatím dostupné nejsou.
+Organization provisioning, organization update i user upsert/revoke jsou dostupné a inzerované
+(`organizationProvisioning`, `userProvisioning`), viz
+[`r2-tenant-synchronization.md`](r2-tenant-synchronization.md). SSO ani fakturace zatím
+dostupné nejsou.
 
 ## Ověření slice
 

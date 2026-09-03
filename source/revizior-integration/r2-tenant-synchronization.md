@@ -1,7 +1,7 @@
 # R2 tenant synchronization — implementovaný organization update a user membership
 
-> Stav: provider endpointy a databázové invarianty hotové; `userProvisioning` čeká na dedicated scope v consumeru
-> Datum: 2026-09-01
+> Stav: hotovo — `userProvisioning=true` po zeleném cross-repo smoke testu
+> Datum: 2026-09-02
 
 ## Endpointy
 
@@ -49,18 +49,29 @@ organizaci vrací `204` bez další změny.
 Migrace `0153_revizior_user_provisioning.sql` přidává nullable canonical `payload_hash`.
 NULL zachovává upgrade kompatibilitu ownerů vytvořených starším organization provisioningem.
 
-## Capability gate a consumer návaznost
+## Capability gate a cross-repo smoke
 
-Provider zatím ponechává `userProvisioning=false`. Consumer v aktuálním stavu posílá na user
-PUT/DELETE scope `organization:write`, zatímco kanonický kontrakt od začátku vyžaduje užší
-`user:write`. Provider z bezpečnostních důvodů širší scope jako alias nepřijímá.
+Consumer přešel na kontraktní `user:write` (`InvoicingAssertionScope::USER_WRITE`, použitý
+výhradně v `syncUser()` a `revokeUser()`); provider širší `organization:write` jako alias dál
+nepřijímá.
 
-Před zapnutím capability musí ReviziOR backend:
+Cross-repo smoke test proběhl 2026-09-02 z ReviziOR Docker sítě (`revizior-invoice.local`,
+consumer `hrabosh/backend` větev `feat/invoicing-context`), celý přes reálné consumer cesty
+(aktivace ve web UI, `revizior:invoicing:probe`, `revizior:invoicing:sync-members`):
 
-1. přidat `user:write` do enumu service assertion scopes;
-2. použít jej výhradně v `syncUser()` a `revokeUser()`;
-3. aktualizovat scope unit testy;
-4. projít cross-repo upsert → role change → revoke → retry smoke testem.
+| Krok | Výsledek u providera |
+|---|---|
+| provisioning organizace | jeden supplier, owner s globální rolí `readonly` a membership `supplier_owner`, link `onboarding/incomplete` |
+| upsert 4 členů | `supplier_owner` ×2, `accountant`, `readonly`; `session_version=1` |
+| změna role (manager → viewer) | `accountant` → `readonly`, `session_version=2` |
+| revoke (deaktivace uživatele) | `active=0`, `revoked_at` vyplněno, membership odebrán, `session_version=2` |
+| retry stejné dávky | žádný další `revizior.user.upserted` audit záznam |
+| reaktivace + návrat role | membership obnoven, `session_version=3` |
 
-Teprve potom se `userProvisioning` přepne na `true`; backend následně může spustit
-`revizior:invoicing:sync-members` pro backfill existujících členů.
+Teprve po tomto smoke testu provider přepnul `userProvisioning` na `true`. Consumer si
+snapshot schopností u už propojených organizací obnoví příkazem `revizior:invoicing:probe`
+a členy dožene `revizior:invoicing:sync-members`.
+
+Smoke odhalil chybu na straně consumeru, ne provideru: `probe` do té doby snapshot na vazbě
+neobnovoval, takže organizace aktivovaná před zapnutím capability by ji nikdy neviděla.
+Opraveno v consumeru (`RefreshInvoicingCapabilitiesHandler`).

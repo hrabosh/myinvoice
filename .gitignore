@@ -43,3 +43,4 @@ storage/mpdf-temp/*
 COMMIT_MSG.tmp
 ISSUE_COMMENT.tmp
 RELEASE_NOTES.tmp
+.pnpm-store/
