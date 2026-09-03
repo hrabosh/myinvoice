@@ -42,6 +42,7 @@ final class IssueInvoiceAction
         private readonly StatsRecomputer $stats,
         private readonly WorkReportRepository $workReports,
         private readonly InvoicePdfRenderer $pdfRenderer,
+        private readonly \MyInvoice\Service\Integration\Revizior\ReviziorInvoiceEventPublisher $reviziorEvents,
     ) {}
 
     public function __invoke(Request $request, Response $response, array $args): Response
@@ -200,7 +201,11 @@ final class IssueInvoiceAction
             'currency'  => $invoice['currency'],
         ], $ip, $request->getHeaderLine('User-Agent'));
 
+        // ReviziOR outbox (R5) — no-op u dokladu bez vazby.
+        $this->reviziorEvents->publish($id, \MyInvoice\Service\Integration\Revizior\ReviziorInvoiceEventPublisher::TYPE_ISSUED);
+
         if ($autoPaid) {
+            $this->reviziorEvents->publish($id, \MyInvoice\Service\Integration\Revizior\ReviziorInvoiceEventPublisher::TYPE_PAID);
             $this->logger->log('invoice.paid', $user['id'] ?? null, 'invoice', $id, [
                 'paid_at' => $invoice['issue_date'],
                 'trigger' => 'advance_fully_covered',

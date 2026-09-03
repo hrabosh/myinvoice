@@ -37,6 +37,7 @@ final class InvoicePaymentService
         private readonly Connection $db,
         private readonly InvoicePdfRenderer $pdf,
         private readonly StatsRecomputer $stats,
+        private readonly \MyInvoice\Service\Integration\Revizior\ReviziorInvoiceEventPublisher $reviziorEvents,
     ) {}
 
     /**
@@ -198,6 +199,8 @@ final class InvoicePaymentService
             $paymentId = (int) $pdo->lastInsertId();
 
             $transition = $this->recomputeLocked($pdo, $invoiceId);
+            // Uvnitř téže transakce jako platba (R5): rollback zahodí obojí.
+            $this->reviziorEvents->publishPayment($invoiceId);
 
             if ($ownsTransaction) {
                 $pdo->commit();
@@ -313,6 +316,7 @@ final class InvoicePaymentService
         try {
             $pdo->prepare('DELETE FROM invoice_payments WHERE id = ?')->execute([$paymentId]);
             $transition = $this->recomputeLocked($pdo, (int) $payment['invoice_id']);
+            $this->reviziorEvents->publishPayment((int) $payment['invoice_id']);
             if ($ownsTransaction) {
                 $pdo->commit();
             }
