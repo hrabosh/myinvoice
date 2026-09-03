@@ -173,3 +173,74 @@ jobs:
       - name: Production build
         working-directory: web
         run: pnpm build
+
+  # ---------------------------------------------------------------------------
+  # Deploy — pouze push na master, po úspěšných testech.
+  # Bez Dockeru: release adresář + symlink, stejně jako u ReviziOR backendu.
+  # ---------------------------------------------------------------------------
+  deploy:
+    name: Deploy na revizior.cz
+    needs: [revizior-contract, backend, frontend]
+    if: github.ref == 'refs/heads/master' && github.event_name == 'push'
+    runs-on: ubuntu-latest
+    environment: production
+    concurrency:
+      group: fakturace-production-deploy
+      cancel-in-progress: false
+
+    steps:
+      - name: Deploy přes SSH
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.DEPLOY_HOST }}
+          username: ${{ secrets.DEPLOY_USER }}
+          key: ${{ secrets.DEPLOY_SSH_KEY }}
+          port: ${{ secrets.DEPLOY_PORT || 22 }}
+          command_timeout: 20m
+          script: |
+            set -e
+
+            BASE="/var/www/fakturace.revizior.cz"
+            RELEASE="$BASE/releases/$(date +%Y%m%d_%H%M%S)"
+            # Výchozí `php` na serveru je 8.3 kvůli ReviziOR backendu; tahle
+            # aplikace vyžaduje 8.5, takže se volá explicitně.
+            PHP=/usr/bin/php8.5
+
+            echo "→ Aktualizuji zrcadlo repozitáře…"
+            git config --global --add safe.directory "$BASE/repo"
+            git -C "$BASE/repo" fetch --tags --force origin master
+            git -C "$BASE/repo" reset --hard origin/master
+
+            echo "→ Nová release: $RELEASE"
+            git clone --quiet --local --no-hardlinks "$BASE/repo" "$RELEASE"
+            cd "$RELEASE"
+
+            echo "→ Sdílené soubory…"
+            # cfg.php nese hesla a klíče, data/ přílohy a logy — obojí přežívá deploy.
+            ln -sf "$BASE/shared/cfg.php" cfg.php
+            rm -rf data && ln -sfn "$BASE/shared/data" data
+
+            echo "→ Composer (bez dev závislostí)…"
+            cd api && composer install --no-dev --optimize-autoloader --no-interaction --no-progress
+            cd "$RELEASE"
+
+            echo "→ Frontend…"
+            cd web && corepack enable && pnpm install --frozen-lockfile --prefer-offline && pnpm build
+            cd "$RELEASE"
+
+            echo "→ Manuál…"
+            $PHP tools/generateManualHtml.php
+
+            echo "→ Migrace…"
+            $PHP api/bin/migrate.php
+
+            echo "→ Přepínám symlink (atomicky)…"
+            ln -sfn "$RELEASE" "$BASE/current"
+
+            echo "→ Reload PHP-FPM…"
+            sudo /bin/systemctl reload php8.5-fpm
+
+            echo "→ Úklid starých release (ponechá poslední 3)…"
+            ls -1dt "$BASE"/releases/* | tail -n +4 | xargs -r rm -rf
+
+            echo "✓ Deploy hotový: $RELEASE"
