@@ -71,6 +71,14 @@ pouze UX pravidlo, ale bezpečnostní hranice se samostatnými integračními a 
 | [`r2-service-foundation.md`](r2-service-foundation.md) | Implementovaný service assertion, replay guard, capabilities probe, konfigurace a další R2 slice |
 | [`r2-organization-provisioning.md`](r2-organization-provisioning.md) | Atomický a idempotentní provisioning organizace, suppliera a prvního ownera |
 | [`r2-tenant-synchronization.md`](r2-tenant-synchronization.md) | Organization update, user upsert/revoke, session version a cross-repo capability gate |
+| [`r3-client-upsert.md`](r3-client-upsert.md) | Upsert klienta podle externího UUID, neúplná adresa a sdílená zapisovací cesta |
+| [`r3-invoice-draft.md`](r3-invoice-draft.md) | Idempotentní koncept dokladu nad existujícím kalkulátorem a snapshoty |
+| [`r4-browser-sso.md`](r4-browser-sso.md) | Jednorázový ticket, allowlist cílů, ověření vlastnictví a návratová adresa |
+| [`r5-event-outbox.md`](r5-event-outbox.md) | Sekvenovaný outbox, podepsané doručení, backoff a dead-letter |
+| [`r6-attachments.md`](r6-attachments.md) | Idempotentní příloha PDF revizní zprávy k dokladu |
+| [`r6-managed-ui.md`](r6-managed-ui.md) | Tenantová obrazovka nastavení a odkaz na původ dokladu v ReviziORu |
+| [`r7-hardening.md`](r7-hardening.md) | Souběh, limity, replay, rotace klíčů bez odstávky a redakce logů |
+| [`production-deploy.md`](production-deploy.md) | **Produkční nasazení bez Dockeru** — rozvržení, klíče, nginx/FPM, CI/CD, cron, rollback |
 | [`licensing-decision.md`](licensing-decision.md) | MIT provenance, third-party gate a bezpečnostní volba JOSE/JWT knihovny |
 | [`contract/v1/`](contract/v1/) | Kanonické cross-repo JSON fixtures a jejich deterministické SHA-256 hashe |
 
