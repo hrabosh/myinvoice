@@ -105,6 +105,30 @@ ln -sfn /var/www/fakturace.revizior.cz/releases/<starší> /var/www/fakturace.re
 sudo systemctl reload php8.5-fpm
 ```
 
+## Známý stav: Redis je vypnutý
+
+`/api/health` hlásí `"redis": false` a je to **záměr, ne porucha** — instalace
+běží na náhradním úložišti v MariaDB (tabulka typu MEMORY), které brute-force
+ochrana i rate limity umí použít. Na stroji přitom Redis běží, používá ho
+ReviziOR.
+
+Zapnout ho je jen konfigurace v `shared/cfg.php`, ale **musí dostat vlastní
+databázi**, jinak si obě aplikace míchají klíče:
+
+```php
+'redis' => [
+    'enabled' => true,
+    'host'    => '127.0.0.1',
+    'port'    => 6379,
+    'db'      => 3,          // index 0 patří ReviziORu
+    'auth'    => '…',        // heslo z REDIS_URL ReviziORu
+    'prefix'  => 'myinvoice:',
+],
+```
+
+Po editaci stačí `sudo systemctl reload php8.5-fpm`; `/api/health` pak vrací
+`"redis": true`.
+
 ## Cron
 
 Crontab uživatele `deployer`:
