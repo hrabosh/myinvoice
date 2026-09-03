@@ -3,7 +3,7 @@ import LinkedDocumentsPanel from '@/components/documents/LinkedDocumentsPanel.vu
 import { ref, computed, onMounted, watch } from 'vue'
 import { useRoute, useRouter, RouterLink } from 'vue-router'
 import { useI18n } from 'vue-i18n'
-import { invoicesApi, type Invoice, type WorkReport, type ApprovalStatus, type InvoiceAttachment, type AdvanceCandidate, type InvoicePayment, type RelatedBankTransaction } from '@/api/invoices'
+import { invoicesApi, type Invoice, type WorkReport, type ApprovalStatus, type InvoiceAttachment, type AdvanceCandidate, type InvoicePayment, type RelatedBankTransaction, type ReviziorSource } from '@/api/invoices'
 import {
   settingsApi,
   type PdfSignatureDocumentEntityType,
@@ -114,6 +114,8 @@ const smtpStatusBadge: Record<string, string> = {
 }
 function smtpBadge(s: string | null): string { return s ? (smtpStatusBadge[s] ?? 'bg-neutral-100 text-neutral-600') : 'bg-neutral-100 text-neutral-600' }
 const attachments = ref<InvoiceAttachment[]>([])
+/** Z čeho doklad vznikl v ReviziORu; prázdné u dokladu bez původu. */
+const reviziorSources = ref<ReviziorSource[]>([])
 const attachmentsBusy = ref(false)
 const attachmentsDragOver = ref(false)
 const attachmentInput = ref<HTMLInputElement | null>(null)
@@ -175,6 +177,13 @@ async function load() {
   invoicesApi.listAttachments(Number(route.params.id))
     .then(items => { attachments.value = items })
     .catch(() => {})
+  if (auth.isManaged) {
+    // Doklad bez vazby na ReviziOR vrátí prázdný seznam; chyba se tiše ignoruje,
+    // protože sekce je doplněk, ne podmínka zobrazení faktury.
+    invoicesApi.reviziorSources(Number(route.params.id))
+      .then(items => { reviziorSources.value = items })
+      .catch(() => { reviziorSources.value = [] })
+  }
   loadPayments()
 }
 
@@ -2402,6 +2411,31 @@ const invoiceActions = computed<ActionItem[]>(() => {
           </button>
         </div>
       </div>
+    </div>
+
+    <!-- Původ dokladu v ReviziORu (managed režim) -->
+    <div v-if="reviziorSources.length > 0"
+         class="bg-surface border border-neutral-200 rounded-lg shadow-sm overflow-hidden">
+      <header class="px-5 py-3 border-b border-neutral-200">
+        <h3 class="text-sm font-semibold uppercase tracking-wide text-neutral-500">
+          {{ t('invoice.revizior_sources.title') }}
+        </h3>
+        <p class="text-xs text-neutral-500 mt-0.5">{{ t('invoice.revizior_sources.hint') }}</p>
+      </header>
+      <ul class="divide-y divide-neutral-100">
+        <li v-for="source in reviziorSources" :key="`${source.type}:${source.uuid}`"
+            class="px-5 py-3 flex items-center justify-between gap-3">
+          <div class="min-w-0">
+            <div class="truncate text-sm">{{ source.description || t('invoice.revizior_sources.type_' + source.type) }}</div>
+            <div class="truncate font-mono text-xs text-neutral-400">{{ source.uuid }}</div>
+          </div>
+          <a v-if="source.url" :href="source.url" target="_blank" rel="noopener noreferrer"
+             class="shrink-0 rounded-md border border-primary-200 px-3 h-8 inline-flex items-center text-sm text-primary-700 hover:bg-primary-50">
+            {{ t('invoice.revizior_sources.open') }}
+          </a>
+          <span v-else class="shrink-0 text-xs text-neutral-400">{{ t('invoice.revizior_sources.no_link') }}</span>
+        </li>
+      </ul>
     </div>
 
     <!-- Přílohy emailu (PDF/Office/obrázky se přibalí při odeslání faktury) -->

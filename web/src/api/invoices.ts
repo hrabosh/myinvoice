@@ -363,7 +363,20 @@ export interface InvoiceListMeta {
   pages?: number
 }
 
+export interface ReviziorSource {
+  type: string
+  uuid: string
+  externalLineKey: string | null
+  description: string | null
+  priceListCode: string | null
+  /** Absolutní odkaz do ReviziORu; `null` u typu, který tam nemá obrazovku. */
+  url: string | null
+}
+
 export const invoicesApi = {
+  reviziorSources: (id: number) =>
+    api.get<{ sources: ReviziorSource[] }>(`/invoices/${id}/revizior-sources`).then(r => r.data.sources),
+
   listGrouped: (filters: ListFilters = {}) => {
     const params: Record<string, string | number> = {}
     if (filters.q) params.q = filters.q

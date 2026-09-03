@@ -35,6 +35,32 @@ test('company member management is tenant scoped and permission driven', async (
   assert.match(layout, /auth\.hasPermission\('supplier_members\.manage'\)/)
 })
 
+test('tenant invoicing settings are permission driven and never touch platform settings', async () => {
+  const [page, router, layout, cs, en] = await Promise.all([
+    readFile(new URL('pages/SupplierSettings.vue', root), 'utf8'),
+    readFile(new URL('router/index.ts', root), 'utf8'),
+    readFile(new URL('components/layout/AppLayout.vue', root), 'utf8'),
+    readFile(new URL('i18n/cs.json', root), 'utf8'),
+    readFile(new URL('i18n/en.json', root), 'utf8'),
+  ])
+
+  // Tenantová obrazovka jde na `/settings/supplier`, ne na platformní `/admin/settings`.
+  assert.match(page, /settingsApi\.getSupplier/)
+  assert.match(page, /settingsApi\.updateSupplier/)
+  // Tenantová stránka nesmí viset na platformním oprávnění ani na admin API.
+  assert.doesNotMatch(page, /platform_settings/)
+  assert.doesNotMatch(page, /adminApi/)
+  assert.match(router, /path: 'settings\/supplier'/)
+  assert.match(router, /requiresPermission: 'supplier_settings\.manage'/)
+  assert.match(layout, /auth\.hasPermission\('supplier_settings\.manage'\)/)
+  // Obě locale, jinak by managed uživatel viděl klíč místo textu.
+  for (const locale of [cs, en]) {
+    const messages = JSON.parse(locale)
+    assert.ok(messages.supplier_settings?.title)
+    assert.ok(messages.nav?.supplier_settings)
+  }
+})
+
 test('platform navigation and routes use platform permissions only', async () => {
   const [auth, router, layout] = await Promise.all([
     readFile(new URL('stores/auth.ts', root), 'utf8'),

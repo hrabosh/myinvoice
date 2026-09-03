@@ -265,12 +265,16 @@ const navSections = computed<NavSection[]>(() => {
     })
   }
 
-  if (!isAdmin && (auth.hasPermission('supplier_members.manage')
+  if (!isAdmin && (auth.hasPermission('supplier_settings.manage')
+      || auth.hasPermission('supplier_members.manage')
       || (auth.user?.role === 'accountant' && accountantSigningProfilesEnabled.value))) {
     sections.push({
       title: t('nav.system'),
       accent: 'neutral',
       items: [
+        ...(auth.hasPermission('supplier_settings.manage')
+          ? [{ to: '/settings/supplier', label: t('nav.supplier_settings'), icon: ICONS.settings }]
+          : []),
         ...(auth.hasPermission('supplier_members.manage')
           ? [{ to: '/settings/members', label: t('nav.members'), icon: ICONS.users }]
           : []),

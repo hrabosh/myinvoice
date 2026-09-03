@@ -225,6 +225,28 @@ nelze snížit ani odebrat. Po změně role nebo odebrání systém odvolá exis
 session dotčeného uživatele. Nový globální účet zakládá správce instalace;
 v managed režimu jej standardně synchronizuje ReviziOR.
 
+### 36.2.5 Nastavení fakturace (managed režim)
+
+**Systém → Nastavení fakturace** je tenantová obrazovka pro vlastníka firmy
+(`supplier_owner`) v režimu ReviziOR Fakturace. Ve standalone instalaci se
+nezobrazuje — tam je celé nastavení firmy v **Systém → Číselníky**.
+
+Obsahuje jen to, co je potřeba k vystavení dokladu:
+
+- **fakturační identita** — název firmy, ulice, město a PSČ;
+- **daňové údaje** — IČO, DIČ a režim DPH (neplátce, identifikovaná osoba,
+  plátce);
+- **kontakt** — e-mail, telefon a web na dokladu;
+- **výchozí hodnoty dokladu** — splatnost a režim cen (s DPH / bez DPH).
+
+Země se needituje: přiřazuje ji ReviziOR podle organizace a její změna by
+rozhodila daňový režim už vystavených dokladů. Chybějící povinné údaje stránka
+vypíše nahoře, ještě než se doklad pokusíš vystavit.
+
+Změny platí pro aktuálně zvolenou firmu, ne pro celou instalaci. Do obrazovky
+se dá přejít i přímo z ReviziORu (**Fakturace → Nastavení**), který uživatele
+přihlásí jednorázovým odkazem.
+
 ## 36.3 Můj profil
 
 **Pravý horní roh → klik na jméno → Můj profil**. Stejná obrazovka jako
