@@ -149,7 +149,24 @@ final class MeAction
             'server_time'         => self::isoUtc($now),
             'idle_expires_at'     => $idleExpiresAt,
             'permissions'         => $permissions,
-        ], $this->capabilities->publicPayload()));
+        ], $this->capabilities->publicPayload(), $this->sessionReturnUrl($session)));
+    }
+
+    /**
+     * Návrat do ReviziORu podle **této** session, ne podle query stringu.
+     *
+     * Uloží ji jen SSO přechod, a to až po ověření allowlistu originů. Session
+     * bez ní (standalone login) nechává hodnotu z konfigurace.
+     *
+     * @param array<string,mixed> $session
+     *
+     * @return array{returnUrl?:string}
+     */
+    private function sessionReturnUrl(array $session): array
+    {
+        $returnUrl = $session['revizior_return_url'] ?? null;
+
+        return is_string($returnUrl) && $returnUrl !== '' ? ['returnUrl' => $returnUrl] : [];
     }
 
     private static function tryParseUtc(string $time): ?\DateTimeImmutable
