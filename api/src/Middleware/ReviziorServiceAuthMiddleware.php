@@ -131,6 +131,32 @@ final class ReviziorServiceAuthMiddleware implements MiddlewareInterface
             return;
         }
 
+        $clientPattern = '#^' . preg_quote(self::PATH_PREFIX, '#') . '/organizations/([^/]+)/clients/[^/]+$#D';
+        if ($request->getMethod() === 'PUT' && preg_match($clientPattern, $path, $matches) === 1) {
+            $this->authorizeOrganizationRequest($identity, 'client:write', (string) $matches[1]);
+            return;
+        }
+
+        $draftPattern = '#^' . preg_quote(self::PATH_PREFIX, '#') . '/organizations/([^/]+)/invoice-drafts$#D';
+        if ($request->getMethod() === 'POST' && preg_match($draftPattern, $path, $matches) === 1) {
+            $this->authorizeOrganizationRequest($identity, 'invoice:write', (string) $matches[1]);
+            return;
+        }
+
+        $attachmentPattern = '#^' . preg_quote(self::PATH_PREFIX, '#') . '/organizations/([^/]+)/invoice-drafts/[^/]+/attachments/[^/]+$#D';
+        if ($request->getMethod() === 'PUT' && preg_match($attachmentPattern, $path, $matches) === 1) {
+            // Vlastní scope, ne `invoice:write`: příloha se streamuje a ukládá
+            // na disk, takže token na úpravu dokladu na ni stačit nemá.
+            $this->authorizeOrganizationRequest($identity, 'attachment:write', (string) $matches[1]);
+            return;
+        }
+
+        $invoicePattern = '#^' . preg_quote(self::PATH_PREFIX, '#') . '/organizations/([^/]+)/invoices/[^/]+$#D';
+        if ($request->getMethod() === 'GET' && preg_match($invoicePattern, $path, $matches) === 1) {
+            $this->authorizeOrganizationRequest($identity, 'invoice:read', (string) $matches[1]);
+            return;
+        }
+
         throw ReviziorServiceAuthException::forbidden('service_scope_insufficient');
     }
 
@@ -155,6 +181,18 @@ final class ReviziorServiceAuthMiddleware implements MiddlewareInterface
         }
         if (preg_match('#^' . preg_quote(self::PATH_PREFIX, '#') . '/organizations/[^/]+/users/[^/]+$#D', $path) === 1) {
             return '/organizations/{organizationUuid}/users/{userUuid}';
+        }
+        if (preg_match('#^' . preg_quote(self::PATH_PREFIX, '#') . '/organizations/[^/]+/clients/[^/]+$#D', $path) === 1) {
+            return '/organizations/{organizationUuid}/clients/{clientUuid}';
+        }
+        if (preg_match('#^' . preg_quote(self::PATH_PREFIX, '#') . '/organizations/[^/]+/invoice-drafts$#D', $path) === 1) {
+            return '/organizations/{organizationUuid}/invoice-drafts';
+        }
+        if (preg_match('#^' . preg_quote(self::PATH_PREFIX, '#') . '/organizations/[^/]+/invoice-drafts/[^/]+/attachments/[^/]+$#D', $path) === 1) {
+            return '/organizations/{organizationUuid}/invoice-drafts/{externalInvoiceKey}/attachments/{externalAttachmentKey}';
+        }
+        if (preg_match('#^' . preg_quote(self::PATH_PREFIX, '#') . '/organizations/[^/]+/invoices/[^/]+$#D', $path) === 1) {
+            return '/organizations/{organizationUuid}/invoices/{externalInvoiceKey}';
         }
         if (preg_match('#^' . preg_quote(self::PATH_PREFIX, '#') . '/organizations/[^/]+$#D', $path) === 1) {
             return '/organizations/{organizationUuid}';

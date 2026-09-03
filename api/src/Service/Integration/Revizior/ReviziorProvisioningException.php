@@ -30,6 +30,28 @@ final class ReviziorProvisioningException extends RuntimeException
         );
     }
 
+    /** @param array<string,string> $fields */
+    public static function clientValidation(array $fields): self
+    {
+        return new self('client_validation_failed', 400, 'Klienta nelze v této podobě uložit.', $fields);
+    }
+
+    /** @param array<string,string> $fields */
+    public static function invoiceValidation(array $fields): self
+    {
+        return new self('invoice_validation_failed', 400, 'Koncept dokladu nelze v této podobě založit.', $fields);
+    }
+
+    public static function attachmentInvalid(string $detail): self
+    {
+        return new self('attachment_invalid', 400, 'Přílohu nelze přijmout.', ['attachment' => $detail]);
+    }
+
+    public static function attachmentTooLarge(): self
+    {
+        return new self('attachment_too_large', 413, 'Příloha je příliš velká.');
+    }
+
     public static function conflict(string $code): self
     {
         return new self($code, 409, 'Požadavek je v konfliktu s existující vazbou.');

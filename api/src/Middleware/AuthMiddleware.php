@@ -49,6 +49,8 @@ final class AuthMiddleware implements MiddlewareInterface
         '/api/auth/webauthn/login/verify',
         '/api/auth/forgot',
         '/api/auth/reset',
+        // Vlastní ověření (jednorázový podepsaný ticket) — session teprve vydává.
+        '/api/auth/revizior/sso',
     ];
 
     /**

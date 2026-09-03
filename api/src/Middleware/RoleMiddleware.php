@@ -45,6 +45,8 @@ final class RoleMiddleware implements MiddlewareInterface
         '/api/auth/setup-crpdph-lookup',
         '/api/auth/setup-sample',
         '/api/auth/login',
+        // Jednorázový SSO ticket se ověřuje sám a session teprve vydává.
+        '/api/auth/revizior/sso',
         '/api/auth/webauthn/login/options',
         '/api/auth/webauthn/login/verify',
         '/api/auth/logout',

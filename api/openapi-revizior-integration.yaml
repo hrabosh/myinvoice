@@ -415,16 +415,28 @@
           "name": {"type": ["string", "null"]}
         }
       },
+      "ClientAddress": {
+        "description": "Adresa klienta. ReviziOR ji zná jako jeden řádek: `street` je povinný, ostatní části smí být `null` (= zdroj je nezná, provider je nedomýšlí a u existujícího klienta nepřepisuje hodnoty doplněné ve fakturaci).",
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["street", "city", "postalCode", "countryCode"],
+        "properties": {
+          "street": {"type": "string", "minLength": 1, "maxLength": 190},
+          "city": {"type": ["string", "null"], "maxLength": 120},
+          "postalCode": {"type": ["string", "null"], "maxLength": 10},
+          "countryCode": {"type": ["string", "null"], "pattern": "^[A-Z]{2}$"}
+        }
+      },
       "ClientUpsertRequest": {
         "type": "object",
         "additionalProperties": false,
         "required": ["specVersion", "companyName", "registrationNumber", "vatNumber", "address", "contacts", "language", "active", "sourceUpdatedAt"],
         "properties": {
           "specVersion": {"$ref": "#/components/schemas/ContractVersion"},
-          "companyName": {"type": "string", "minLength": 1},
-          "registrationNumber": {"type": ["string", "null"]},
-          "vatNumber": {"type": ["string", "null"]},
-          "address": {"$ref": "#/components/schemas/Address"},
+          "companyName": {"type": "string", "minLength": 1, "maxLength": 190},
+          "registrationNumber": {"type": ["string", "null"], "maxLength": 20},
+          "vatNumber": {"type": ["string", "null"], "maxLength": 20},
+          "address": {"$ref": "#/components/schemas/ClientAddress"},
           "contacts": {"type": "array", "maxItems": 3, "items": {"$ref": "#/components/schemas/ClientContact"}},
           "language": {"type": "string", "enum": ["cs", "en"]},
           "active": {"type": "boolean"},

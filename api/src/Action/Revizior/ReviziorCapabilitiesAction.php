@@ -20,18 +20,23 @@ final class ReviziorCapabilitiesAction
             // původní MyInvoice domény. R2 je bude zapínat po jednotlivých slice.
             'features' => [
                 'organizationProvisioning' => true,
-                // Provider endpoint je hotový, consumer ale ještě posílá
-                // organization:write místo kontraktního user:write.
-                'userProvisioning' => false,
-                'clientUpsert' => false,
+                // Consumer přešel na kontraktní `user:write`; cross-repo smoke
+                // (upsert → změna role → revoke → retry) prošel 2026-09-02.
+                'userProvisioning' => true,
+                // Sdílený ClientWriter + revizior_client_links (R3, slice 1).
+                'clientUpsert' => true,
                 'priceResolution' => false,
-                'invoiceDraft' => false,
-                'attachments' => false,
-                'sso' => false,
+                // Sdílený InvoiceDraftCreator + revizior_invoice_links (R3, slice 3).
+                'invoiceDraft' => true,
+                // R6: streamovaný upload PDF s digestem a idempotencí.
+                'attachments' => true,
+                // R4: jednorázový ticket, session a target/return allowlist.
+                'sso' => true,
                 'proforma' => false,
                 'creditNote' => false,
                 'partialPayments' => false,
-                'eventOutbox' => false,
+                // R5: transakční outbox + podepsaný callback.
+                'eventOutbox' => true,
             ],
             'limits' => [
                 'maxItemsPerInvoice' => 500,

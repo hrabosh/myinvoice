@@ -354,6 +354,298 @@ paths:
             application/json:
               schema: { $ref: '#/components/schemas/ReviziorErrorResponse' }
 
+  /api/integrations/revizior/v1/organizations/{organizationUuid}/clients/{clientUuid}:
+    put:
+      tags: [ReviziOR service]
+      summary: Upsert klienta podle jeho ReviziOR UUID
+      description: |
+        Vyžaduje tenantový subject shodný s `organizationUuid` a scope `client:write`.
+        Identita klienta je výhradně UUID (žádné spojování podle IČO ani e-mailu).
+        Zápis jde přes stejnou službu jako UI (validace, kontakty, audit); stejný
+        kanonický payload nebo starší `sourceUpdatedAt` vrací `unchanged` bez zápisu.
+        `city`/`postalCode`/`countryCode` smí být `null` — hodnoty doplněné ve
+        fakturaci se pak nepřepisují.
+      security:
+        - ReviziorServiceAssertion: []
+      parameters:
+        - $ref: '#/components/parameters/ReviziorOrganizationUuid'
+        - $ref: '#/components/parameters/ReviziorClientUuid'
+        - $ref: '#/components/parameters/ReviziorRequestIdHeader'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ReviziorClientUpsertRequest' }
+      responses:
+        '200':
+          description: Klient byl aktualizován nebo zůstal beze změny.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ReviziorClientLinkResponse' }
+        '201':
+          description: Nový klient a jeho vazba byly vytvořeny.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ReviziorClientLinkResponse' }
+        '400':
+          description: Neplatný payload (`client_validation_failed`, pole v `error.fields`).
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ReviziorErrorResponse' }
+        '401':
+          description: Service assertion chybí nebo není platný.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ReviziorErrorResponse' }
+        '403':
+          description: Scope nebo tenant subject operaci nepovoluje.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ReviziorErrorResponse' }
+        '404':
+          description: Organizace ještě nebyla provisionována.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ReviziorErrorResponse' }
+        '409':
+          description: Organizace je suspendovaná nebo vazba klienta koliduje (`client_link_conflict`).
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ReviziorErrorResponse' }
+        '503':
+          description: Provider nemůže synchronizaci bezpečně dokončit.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ReviziorErrorResponse' }
+  /api/integrations/revizior/v1/organizations/{organizationUuid}/invoice-drafts:
+    post:
+      tags: [ReviziOR service]
+      summary: Idempotentně založí koncept vydaného dokladu
+      description: |
+        Vyžaduje tenantový subject shodný s `organizationUuid`, scope `invoice:write`
+        a hlavičku `Idempotency-Key` (`invoice-draft:{externalInvoiceKey}`). Doklad
+        vzniká stejnou službou jako v UI (defaulty, validace, výpočet, kurz); stejný
+        klíč a payload vrací uloženou odpověď, stejný klíč s jiným payloadem
+        `409 idempotency_conflict`, druhý doklad pro týž `externalInvoiceKey`
+        `409 invoice_link_conflict`. Částky jsou decimal stringy, výsledek v minor units.
+      security:
+        - ReviziorServiceAssertion: []
+      parameters:
+        - $ref: '#/components/parameters/ReviziorOrganizationUuid'
+        - $ref: '#/components/parameters/ReviziorRequestIdHeader'
+        - name: Idempotency-Key
+          in: header
+          required: true
+          schema: { type: string, maxLength: 255 }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ReviziorInvoiceDraftRequest' }
+      responses:
+        '200':
+          description: Uložená idempotentní odpověď (opakovaný požadavek).
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ReviziorInvoiceSnapshotResponse' }
+        '201':
+          description: Koncept a jeho vazba byly vytvořeny.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ReviziorInvoiceSnapshotResponse' }
+        '400':
+          description: Neplatný payload (`invoice_validation_failed`, pole v `error.fields`).
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ReviziorErrorResponse' }
+        '401':
+          description: Service assertion chybí nebo není platný.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ReviziorErrorResponse' }
+        '403':
+          description: Scope nebo tenant subject operaci nepovoluje.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ReviziorErrorResponse' }
+        '404':
+          description: Organizace nebo klient (`client_not_linked`) nejsou provisionováni.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ReviziorErrorResponse' }
+        '409':
+          description: Idempotence, vazba dokladu nebo suspendovaná organizace.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ReviziorErrorResponse' }
+        '503':
+          description: Provider nemůže koncept bezpečně založit.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ReviziorErrorResponse' }
+  /api/integrations/revizior/v1/organizations/{organizationUuid}/invoices/{externalInvoiceKey}:
+    get:
+      tags: [ReviziOR service]
+      summary: Vrátí normalizovaný snapshot dokladu (reconciliation read)
+      description: |
+        Vyžaduje scope `invoice:read` a tenantový subject. Opravný mechanismus při
+        ztraceném webhooku, ne primární polling. `sequence` je pořadové číslo
+        poslední události dokladu.
+      security:
+        - ReviziorServiceAssertion: []
+      parameters:
+        - $ref: '#/components/parameters/ReviziorOrganizationUuid'
+        - $ref: '#/components/parameters/ReviziorExternalInvoiceKey'
+        - $ref: '#/components/parameters/ReviziorRequestIdHeader'
+      responses:
+        '200':
+          description: Snapshot dokladu.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ReviziorInvoiceSnapshotResponse' }
+        '401':
+          description: Service assertion chybí nebo není platný.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ReviziorErrorResponse' }
+        '403':
+          description: Scope nebo tenant subject operaci nepovoluje.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ReviziorErrorResponse' }
+        '404':
+          description: Organizace nebo doklad (`invoice_not_found`) neexistuje.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ReviziorErrorResponse' }
+  /api/integrations/revizior/v1/organizations/{organizationUuid}/invoice-drafts/{externalInvoiceKey}/attachments/{externalAttachmentKey}:
+    put:
+      tags: [ReviziOR service]
+      summary: Idempotentně připojí PDF k dokladu
+      description: |
+        Vyžaduje tenantový subject a scope `attachment:write` (`invoice:write`
+        nestačí — příloha se streamuje na disk). Tělo je `application/pdf`,
+        hlavička `Digest: sha-256=<base64>` je povinná a ověřuje se nad skutečně
+        přečtenými bajty; kontroluje se i `%PDF-` a MIME. Limit 20 MiB. Stejný
+        `externalAttachmentKey` se stejným digestem vrací původní přílohu (`200`),
+        s jiným digestem `409 attachment_digest_mismatch`. Volitelné
+        `X-File-Name` slouží jen jako zobrazovaný název; jméno v úložišti
+        generuje poskytovatel.
+      security:
+        - ReviziorServiceAssertion: []
+      parameters:
+        - $ref: '#/components/parameters/ReviziorOrganizationUuid'
+        - $ref: '#/components/parameters/ReviziorExternalInvoiceKey'
+        - name: externalAttachmentKey
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+        - $ref: '#/components/parameters/ReviziorRequestIdHeader'
+        - name: Digest
+          in: header
+          required: true
+          schema: { type: string, pattern: '^sha-256=[A-Za-z0-9+/]+={0,2}$' }
+        - name: X-File-Name
+          in: header
+          required: false
+          schema: { type: string, maxLength: 255 }
+      requestBody:
+        required: true
+        content:
+          application/pdf:
+            schema: { type: string, format: binary }
+      responses:
+        '200':
+          description: Příloha s tímto klíčem a digestem už existuje.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ReviziorAttachmentResponse' }
+        '201':
+          description: Příloha byla uložena.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ReviziorAttachmentResponse' }
+        '400':
+          description: Není to PDF, nesedí délka nebo chybí `Digest` (`attachment_invalid`).
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ReviziorErrorResponse' }
+        '401':
+          description: Service assertion chybí nebo není platný.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ReviziorErrorResponse' }
+        '403':
+          description: Scope nebo tenant subject operaci nepovoluje.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ReviziorErrorResponse' }
+        '404':
+          description: Organizace nebo doklad neexistuje.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ReviziorErrorResponse' }
+        '409':
+          description: Jiný digest pod stejným klíčem nebo doklad nelze měnit.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ReviziorErrorResponse' }
+        '413':
+          description: Příloha přesahuje 20 MiB.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ReviziorErrorResponse' }
+        '503':
+          description: Provider nemůže přílohu bezpečně uložit.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ReviziorErrorResponse' }
+  /api/auth/revizior/sso:
+    get:
+      tags: [ReviziOR service]
+      summary: Spotřebuje jednorázový browser SSO ticket a vydá session
+      description: |
+        Mimo service API base path — sem chodí prohlížeč, ne server. Ticket je
+        RS256 JWS s **vlastní audience** (`…/api/auth/revizior/sso`) a purpose
+        `browser_sso`; platí nejvýš 60 sekund a právě jednou (`jti` se
+        spotřebuje atomicky). Role z ticketu se ignoruje: členství, cíl i
+        návratová adresa se ověřují proti databázi a allowlistům. Úspěch je
+        `303` na relativní cestu bez ticketu, s novou host-only session cookie.
+        Ve standalone režimu endpoint neexistuje (404).
+      security: []
+      parameters:
+        - name: ticket
+          in: query
+          required: true
+          schema: { type: string, minLength: 1, maxLength: 8192 }
+      responses:
+        '303':
+          description: Nová session a bezpečný relativní redirect.
+          headers:
+            Location:
+              schema: { type: string }
+            Set-Cookie:
+              schema: { type: string }
+        '401':
+          description: Ticket není platný, vypršel nebo už byl použitý (HTML stránka bez detailu).
+          content:
+            text/html:
+              schema: { type: string }
+        '403':
+          description: Neaktivní členství, suspendovaná organizace, cizí cíl nebo nepovolená návratová adresa.
+          content:
+            text/html:
+              schema: { type: string }
+        '404':
+          description: Instalace neběží v režimu ReviziOR Fakturace.
+          content:
+            text/html:
+              schema: { type: string }
+        '503':
+          description: SSO není nakonfigurované.
+          content:
+            text/html:
+              schema: { type: string }
   /api/v1/branding-profiles:
     parameters:
       - $ref: '#/components/parameters/SupplierIdHeader'
@@ -5656,6 +5948,16 @@ components:
       name: organizationUuid
       required: true
       schema: { type: string, format: uuid }
+    ReviziorClientUuid:
+      name: clientUuid
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+    ReviziorExternalInvoiceKey:
+      name: externalInvoiceKey
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
     ReviziorUserUuid:
       in: path
       name: userUuid
@@ -5811,6 +6113,135 @@ components:
             externalUserId: { type: string, pattern: '^[1-9][0-9]*$' }
             role: { type: string, enum: [supplier_owner, accountant, readonly] }
             active: { type: boolean }
+        meta: { $ref: '#/components/schemas/ReviziorResponseMeta' }
+    ReviziorClientUpsertRequest:
+      type: object
+      additionalProperties: false
+      required: [specVersion, companyName, registrationNumber, vatNumber, address, contacts, language, active, sourceUpdatedAt]
+      properties:
+        specVersion: { type: string, const: "1.0" }
+        companyName: { type: string, minLength: 1, maxLength: 190 }
+        registrationNumber: { type: [string, 'null'], maxLength: 20 }
+        vatNumber: { type: [string, 'null'], maxLength: 20 }
+        address:
+          type: object
+          additionalProperties: false
+          required: [street, city, postalCode, countryCode]
+          properties:
+            street: { type: string, minLength: 1, maxLength: 190 }
+            city: { type: [string, 'null'], maxLength: 120 }
+            postalCode: { type: [string, 'null'], maxLength: 10 }
+            countryCode: { type: [string, 'null'], pattern: '^[A-Z]{2}$' }
+        contacts:
+          type: array
+          maxItems: 3
+          items:
+            type: object
+            additionalProperties: false
+            required: [type, email, name]
+            properties:
+              type: { type: string, enum: [billing] }
+              email: { type: string, format: email, maxLength: 190 }
+              name: { type: [string, 'null'], maxLength: 120 }
+        language: { type: string, enum: [cs, en] }
+        active: { type: boolean }
+        sourceUpdatedAt: { type: string, format: date-time }
+    ReviziorClientLinkResponse:
+      type: object
+      additionalProperties: false
+      required: [specVersion, data, meta]
+      properties:
+        specVersion: { type: string, const: "1.0" }
+        data:
+          type: object
+          additionalProperties: false
+          required: [clientUuid, externalClientId, operation, payloadHash]
+          properties:
+            clientUuid: { type: string, format: uuid }
+            externalClientId: { type: string, pattern: '^[1-9][0-9]*$' }
+            operation: { type: string, enum: [created, updated, unchanged] }
+            payloadHash: { type: string, pattern: '^sha256:[0-9a-f]{64}$' }
+        meta: { $ref: '#/components/schemas/ReviziorResponseMeta' }
+    ReviziorInvoiceDraftRequest:
+      type: object
+      additionalProperties: false
+      required: [specVersion, externalInvoiceKey, clientUuid, invoiceType, currency, issueDate, taxDate, dueDate, pricesIncludeVat, language, items]
+      properties:
+        specVersion: { type: string, const: "1.0" }
+        externalInvoiceKey: { type: string, format: uuid }
+        clientUuid: { type: string, format: uuid }
+        invoiceType: { type: string, enum: [invoice, proforma, credit_note] }
+        currency: { type: string, pattern: '^[A-Z]{3}$' }
+        issueDate: { type: string, format: date }
+        taxDate: { type: [string, 'null'], format: date }
+        dueDate: { type: string, format: date }
+        pricesIncludeVat: { type: boolean }
+        language: { type: string, enum: [cs, en] }
+        items:
+          type: array
+          minItems: 1
+          maxItems: 500
+          items:
+            type: object
+            additionalProperties: false
+            required: [externalLineKey, priceListCode, description, quantity, unit, unitPrice, vatRate, sourceReferences]
+            properties:
+              externalLineKey: { type: string, format: uuid }
+              priceListCode: { type: [string, 'null'], maxLength: 50 }
+              description: { type: string, minLength: 1 }
+              quantity: { type: string, pattern: '^-?[0-9]+(?:\.[0-9]+)?$' }
+              unit: { type: string, minLength: 1, maxLength: 20 }
+              unitPrice: { type: string, pattern: '^-?[0-9]+(?:\.[0-9]+)?$' }
+              vatRate: { type: string, pattern: '^[0-9]+(?:\.[0-9]+)?$' }
+              sourceReferences:
+                type: array
+                items:
+                  type: object
+                  additionalProperties: false
+                  required: [type, uuid]
+                  properties:
+                    type: { type: string, enum: [revision_report, revision_schedule, revision_job, manual] }
+                    uuid: { type: string, format: uuid }
+    ReviziorInvoiceSnapshotResponse:
+      type: object
+      additionalProperties: false
+      required: [specVersion, data, meta]
+      properties:
+        specVersion: { type: string, const: "1.0" }
+        data:
+          type: object
+          additionalProperties: false
+          required: [externalInvoiceKey, invoiceId, invoiceNumber, status, rawStatus, currency, totalMinor, amountDueMinor, issueDate, dueDate, editPath, publicUrl, pdfUrl, sequence]
+          properties:
+            externalInvoiceKey: { type: string, format: uuid }
+            invoiceId: { type: string, pattern: '^[1-9][0-9]*$' }
+            invoiceNumber: { type: [string, 'null'] }
+            status: { type: string, enum: [draft, issued, sent, partially_paid, paid, overdue, cancelled, credited, unknown] }
+            rawStatus: { type: string }
+            currency: { type: string, pattern: '^[A-Z]{3}$' }
+            totalMinor: { type: integer }
+            amountDueMinor: { type: integer }
+            issueDate: { type: string, format: date }
+            dueDate: { type: string, format: date }
+            editPath: { type: [string, 'null'] }
+            publicUrl: { type: [string, 'null'], format: uri }
+            pdfUrl: { type: [string, 'null'], format: uri }
+            sequence: { type: integer, minimum: 0 }
+        meta: { $ref: '#/components/schemas/ReviziorResponseMeta' }
+    ReviziorAttachmentResponse:
+      type: object
+      additionalProperties: false
+      required: [specVersion, data, meta]
+      properties:
+        specVersion: { type: string, const: "1.0" }
+        data:
+          type: object
+          additionalProperties: false
+          required: [attachmentId, sha256, sizeBytes]
+          properties:
+            attachmentId: { type: string, pattern: '^[1-9][0-9]*$' }
+            sha256: { type: string, pattern: '^[0-9a-f]{64}$' }
+            sizeBytes: { type: integer, minimum: 1 }
         meta: { $ref: '#/components/schemas/ReviziorResponseMeta' }
     ReviziorCapabilitiesResponse:
       type: object

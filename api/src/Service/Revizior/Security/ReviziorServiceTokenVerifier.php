@@ -21,7 +21,8 @@ final class ReviziorServiceTokenVerifier
     public const MAX_TTL_SECONDS = 60;
     public const MAX_CLOCK_SKEW_SECONDS = 30;
 
-    private ?JWK $publicKey = null;
+    /** @var array<string, JWK> načtené klíče podle `kid` */
+    private array $publicKeys = [];
 
     public function __construct(
         private readonly Config $config,
@@ -32,8 +33,7 @@ final class ReviziorServiceTokenVerifier
     {
         return $this->issuer() !== ''
             && $this->audience() !== ''
-            && $this->keyId() !== ''
-            && is_readable($this->publicKeyPath());
+            && $this->acceptedKeys() !== [];
     }
 
     public function verify(string $token, string $requestId): ReviziorServiceIdentity
@@ -54,15 +54,17 @@ final class ReviziorServiceTokenVerifier
                 throw ReviziorServiceAuthException::unauthorized();
             }
             $header = $jws->getSignature(0)->getProtectedHeader();
+            $keyId = $header['kid'] ?? null;
             if (($header['alg'] ?? null) !== 'RS256'
-                || ($header['kid'] ?? null) !== $this->keyId()
+                || !is_string($keyId)
+                || !array_key_exists($keyId, $this->acceptedKeys())
                 || ($header['typ'] ?? null) !== 'JWT'
             ) {
                 throw ReviziorServiceAuthException::unauthorized();
             }
 
             $verifier = new JWSVerifier(new AlgorithmManager([new RS256()]));
-            if (!$verifier->verifyWithKey($jws, $this->publicKey(), 0)) {
+            if (!$verifier->verifyWithKey($jws, $this->publicKey($keyId), 0)) {
                 throw ReviziorServiceAuthException::unauthorized();
             }
 
@@ -163,25 +165,49 @@ final class ReviziorServiceTokenVerifier
         return trim((string) $this->config->get('deployment.revizior.service_auth.audience', ''));
     }
 
-    private function keyId(): string
+    /**
+     * Přijímané podpisové klíče `kid => cesta k PEM`.
+     *
+     * Mapa, ne jedna hodnota: rotace klíče se musí dát udělat bez odstávky —
+     * po dobu překryvu platí starý i nový. Jednoduchá dvojice
+     * `key_id`/`public_key_path` zůstává kvůli zpětné kompatibilitě a přidává
+     * se do mapy jako další položka.
+     *
+     * @return array<string, string>
+     */
+    private function acceptedKeys(): array
     {
-        return trim((string) $this->config->get('deployment.revizior.service_auth.key_id', ''));
+        $keys = [];
+        $keyId = trim((string) $this->config->get('deployment.revizior.service_auth.key_id', ''));
+        $path = trim((string) $this->config->get('deployment.revizior.service_auth.public_key_path', ''));
+        if ($keyId !== '' && is_readable($path)) {
+            $keys[$keyId] = $path;
+        }
+
+        $configured = $this->config->get('deployment.revizior.service_auth.public_keys', []);
+        foreach (is_array($configured) ? $configured : [] as $id => $file) {
+            if (!is_string($id) || !is_string($file) || trim($id) === '' || !is_readable(trim($file))) {
+                continue;
+            }
+            $keys[trim($id)] = trim($file);
+        }
+
+        return $keys;
     }
 
-    private function publicKeyPath(): string
+    private function publicKey(string $keyId): JWK
     {
-        return trim((string) $this->config->get('deployment.revizior.service_auth.public_key_path', ''));
-    }
-
-    private function publicKey(): JWK
-    {
-        if ($this->publicKey !== null) {
-            return $this->publicKey;
+        if (isset($this->publicKeys[$keyId])) {
+            return $this->publicKeys[$keyId];
+        }
+        $path = $this->acceptedKeys()[$keyId] ?? null;
+        if ($path === null) {
+            throw ReviziorServiceAuthException::unauthorized();
         }
         try {
-            return $this->publicKey = JWKFactory::createFromKeyFile($this->publicKeyPath(), null, [
+            return $this->publicKeys[$keyId] = JWKFactory::createFromKeyFile($path, null, [
                 'alg' => 'RS256',
-                'kid' => $this->keyId(),
+                'kid' => $keyId,
                 'use' => 'sig',
             ]);
         } catch (Throwable) {
