@@ -205,6 +205,9 @@ jobs:
             # Výchozí `php` na serveru je 8.3 kvůli ReviziOR backendu; tahle
             # aplikace vyžaduje 8.5, takže se volá explicitně.
             PHP=/usr/bin/php8.5
+            # Composer musí běžet pod 8.5, jinak neprojde platform check
+            # (`php: ^8.5`) a chybí mu pdo_mysql z výchozí 8.3.
+            COMPOSER_BIN="$(command -v composer)"
 
             echo "→ Aktualizuji zrcadlo repozitáře…"
             git config --global --add safe.directory "$BASE/repo"
@@ -221,7 +224,7 @@ jobs:
             rm -rf data && ln -sfn "$BASE/shared/data" data
 
             echo "→ Composer (bez dev závislostí)…"
-            cd api && composer install --no-dev --optimize-autoloader --no-interaction --no-progress
+            cd api && $PHP "$COMPOSER_BIN" install --no-dev --optimize-autoloader --no-interaction --no-progress
             cd "$RELEASE"
 
             echo "→ Frontend…"
