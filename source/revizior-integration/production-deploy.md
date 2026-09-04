@@ -56,6 +56,24 @@ na straně ReviziORu. Privátní poloviny obou ReviziOR párů leží jen tam
 (`/var/www/revizor/shared/config/invoicing/`). Rotace se dělá překryvem — obě
 strany umí mapu `kid → klíč`, viz [`r7-hardening.md`](r7-hardening.md).
 
+## Účet správce instalace: nikdy na e-mail vlastníka organizace
+
+Bootstrap zakládá globálního admina pro nouzový přístup ke správě instalace.
+Ten účet **musí mít vlastní adresu** (`admin@fakturace.revizior.cz`), ne adresu
+člověka, který je v ReviziORu vlastníkem organizace.
+
+Provisioning tenanta totiž hledá vlastníka podle e-mailu a účet s rolí `admin`
+odmítne přijmout — správce celé instalace se nesmí stát vlastníkem tenanta,
+jinak by tenant dosáhl na data ostatních. Když adresy kolidují, aktivace skončí
+na `409 user_link_conflict` a **opakování nepomůže**; adresu je potřeba uvolnit:
+
+```sql
+UPDATE users SET email = 'admin@fakturace.revizior.cz' WHERE id = 1;
+```
+
+Stalo se to při první ostré aktivaci 2026-09-03. Poznávací znamení: v `supplier`
+ani v `revizior_organization_links` nic nevzniklo, přesto provisioning vrací 409.
+
 ## PHP-FPM a nginx
 
 Vlastní pool `/etc/php/8.5/fpm/pool.d/fakturace.conf` běží jako `deployer`
