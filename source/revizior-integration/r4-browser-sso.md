@@ -114,3 +114,19 @@ v `location =` se neuplatní, když `try_files` skočí do named location.
 
 ~~R5 event outbox~~ — hotovo, viz [`r5-event-outbox.md`](r5-event-outbox.md).
 Zbývá R6: přílohy a dokončení managed UI včetně `/settings/supplier`.
+
+## MFA: managed session stojí mimo lokální politiku
+
+Když má instalace zapnuté povinné MFA (`auth.require_mfa`), platí to pro
+**lokální přihlášení heslem** — typicky správce instalace. Session založená
+spotřebovaným SSO ticketem je z té politiky vyňatá.
+
+Důvod: managed uživatel u poskytovatele žádné heslo ani faktor nemá a mít nemá.
+Jeho identitu i sílu přihlášení ručí ReviziOR, který ticket podepsal; druhý
+faktor navíc by znamenal enrollment do systému, do kterého se uživatel
+nepřihlašuje. Bez výjimky skončí každý business request managed uživatele na
+`401 mfa_reauthentication_required` a uživatel je z fakturace zavřený ven bez
+cesty zpátky — přesně to se stalo po první ostré aktivaci (2026-09-05).
+
+Výjimka je úzká: váže se na `auth_method = 'revizior_sso'`, ne na roli ani na
+tenanta. Hlídá ji `RequireMfaMiddlewareTest`.

@@ -39,6 +39,31 @@ final class RequireMfaMiddlewareTest extends TestCase
         }
     }
 
+    /**
+     * Managed uživatel nemá u poskytovatele heslo ani faktor — přihlašuje ho
+     * podepsaný ticket z ReviziORu. Vynucená lokální MFA ho po aktivaci zavřela
+     * ven z fakturace bez cesty zpátky (produkce, 2026-09-05).
+     */
+    public function testReviziorSsoSessionIsExemptFromRequiredMfa(): void
+    {
+        $middleware = $this->middleware(required: true);
+
+        self::assertSame(204, $middleware->process(
+            $this->sessionRequest('/api/invoices', 'basic', authMethod: 'revizior_sso'),
+            $this->handler(),
+        )->getStatusCode());
+    }
+
+    public function testLocalPasswordSessionStillNeedsMfaWhenRequired(): void
+    {
+        $middleware = $this->middleware(required: true);
+
+        self::assertSame(401, $middleware->process(
+            $this->sessionRequest('/api/invoices', 'basic', authMethod: 'password'),
+            $this->handler(),
+        )->getStatusCode());
+    }
+
     public function testOptionalPolicyAllowsBasicAndLegacySessions(): void
     {
         $middleware = $this->middleware(required: false);
@@ -139,12 +164,16 @@ final class RequireMfaMiddlewareTest extends TestCase
         string $path,
         string $assurance,
         string $method = 'GET',
+        string $authMethod = 'password',
     ): ServerRequestInterface {
         return (new ServerRequestFactory())
             ->createServerRequest($method, $path)
             ->withAttribute(AuthMiddleware::ATTR_METHOD, 'session')
             ->withAttribute(AuthMiddleware::ATTR_USER, ['id' => 17])
-            ->withAttribute(AuthMiddleware::ATTR_SESSION, ['assurance_level' => $assurance]);
+            ->withAttribute(AuthMiddleware::ATTR_SESSION, [
+                'assurance_level' => $assurance,
+                'auth_method' => $authMethod,
+            ]);
     }
 
     private function handler(bool $assertMustSetup = false): RequestHandlerInterface
