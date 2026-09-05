@@ -23,6 +23,9 @@ final class RequireMfaMiddleware implements MiddlewareInterface
 {
     public const ATTR_MUST_SETUP_MFA = 'auth.must_setup_mfa';
 
+    /** Metoda session, kterou zakládá spotřebovaný SSO ticket z ReviziORu. */
+    private const AUTH_METHOD_REVIZIOR_SSO = 'revizior_sso';
+
     /** @var array<string,list<string>> */
     private const LOCKED_SESSION_PATHS = [
         'GET' => [
@@ -77,6 +80,7 @@ final class RequireMfaMiddleware implements MiddlewareInterface
 
         $session = $request->getAttribute(AuthMiddleware::ATTR_SESSION);
         $assurance = is_array($session) ? (string) ($session['assurance_level'] ?? 'legacy') : 'legacy';
+        $authMethod = is_array($session) ? (string) ($session['auth_method'] ?? '') : '';
         $method = strtoupper($request->getMethod());
         $path = $request->getUri()->getPath();
 
@@ -102,6 +106,16 @@ final class RequireMfaMiddleware implements MiddlewareInterface
         }
 
         if (!$this->policy->isRequired() || $assurance === 'strong') {
+            return $handler->handle($request);
+        }
+
+        // Managed session z ReviziORu stojí mimo lokální MFA politiku.
+        // Druhý faktor by tu managed uživatel neměl kde získat: u poskytovatele
+        // nemá heslo ani faktor a přihlašuje se výhradně jednorázovým podepsaným
+        // ticketem, jehož sílu (včetně MFA) ručí ReviziOR. Vynucení by ho zavřelo
+        // ven z fakturace bez cesty zpátky. Na lokální přihlášení heslem —
+        // typicky správce instalace — se politika vztahuje dál.
+        if ($authMethod === self::AUTH_METHOD_REVIZIOR_SSO) {
             return $handler->handle($request);
         }
 
